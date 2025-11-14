@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Activity, Plus, Search, LogOut, FolderPlus, Trash2 } from "lucide-react";
 import { DoctorFolderCard } from "@/components/DoctorFolderCard";
 import { CreateDoctorDialog } from "@/components/CreateDoctorDialog";
+import { StatisticsDashboard } from "@/components/StatisticsDashboard";
 import { generateSampleData, clearAllData } from "@/utils/sampleDataGenerator";
 
 const Dashboard = () => {
@@ -114,6 +115,12 @@ const Dashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {doctorFolders.length > 0 && (
+          <div className="mb-8">
+            <StatisticsDashboard doctorFolders={doctorFolders} />
+          </div>
+        )}
+
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-3xl font-bold text-foreground">My Medical Vault</h2>
