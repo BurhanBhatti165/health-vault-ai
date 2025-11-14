@@ -7,136 +7,71 @@ import { Activity, ArrowLeft, Upload, FileText, Loader2 } from "lucide-react";
 import { DocumentCard } from "@/components/DocumentCard";
 import { DocumentUploadDialog } from "@/components/DocumentUploadDialog";
 
-interface AppointmentFolder {
-  id: string;
-  appointment_date: string;
-  notes: string | null;
-  doctor_folder_id: string;
-}
-
-interface DoctorFolder {
-  id: string;
-  doctor_name: string;
-}
-
-interface Document {
-  id: string;
-  file_name: string;
-  file_path: string;
-  file_type: string;
-  file_size: number | null;
-  processing_status: string;
-  created_at: string;
-}
-
 const AppointmentFolder = () => {
-  const { appointmentId } = useParams<{ appointmentId: string }>();
+  const { appointmentId } = useParams();
   const navigate = useNavigate();
-  const [appointment, setAppointment] = useState<AppointmentFolder | null>(null);
-  const [doctorFolder, setDoctorFolder] = useState<DoctorFolder | null>(null);
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [appointment, setAppointment] = useState(null);
+  const [doctorFolder, setDoctorFolder] = useState(null);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    const initialize = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
-      setUserId(session.user.id);
-      await fetchAppointmentDetails();
-      await fetchDocuments();
-      setLoading(false);
-    };
-
-    initialize();
-  }, [appointmentId, navigate]);
-
-  const fetchAppointmentDetails = async () => {
-    if (!appointmentId) return;
-
-    const { data, error } = await supabase
-      .from("appointment_folders")
-      .select(`
-        *,
-        doctor_folders:doctor_folder_id (
-          id,
-          doctor_name
-        )
-      `)
-      .eq("id", appointmentId)
-      .single();
-
-    if (error) {
-      console.error("Error fetching appointment:", error);
-      toast.error("Failed to load appointment");
+    const user = localStorage.getItem("user");
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    const userData = JSON.parse(user);
+    setUserId(userData.id);
+    
+    const appointments = JSON.parse(localStorage.getItem("appointments") || "[]");
+    const currentAppointment = appointments.find(a => a.id === appointmentId);
+    
+    if (!currentAppointment) {
       navigate("/dashboard");
       return;
     }
+    
+    setAppointment(currentAppointment);
+    
+    const folders = JSON.parse(localStorage.getItem("doctorFolders") || "[]");
+    const doctor = folders.find(f => f.id === currentAppointment.doctor_folder_id);
+    setDoctorFolder(doctor);
+    
+    const allDocs = JSON.parse(localStorage.getItem("documents") || "[]");
+    const appointmentDocs = allDocs.filter(d => d.appointment_folder_id === appointmentId);
+    setDocuments(appointmentDocs);
+    
+    setLoading(false);
+  }, [appointmentId, navigate]);
 
-    setAppointment(data);
-    setDoctorFolder(data.doctor_folders as any);
-  };
-
-  const fetchDocuments = async () => {
-    if (!appointmentId) return;
-
-    const { data, error } = await supabase
-      .from("documents")
-      .select("*")
-      .eq("appointment_folder_id", appointmentId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching documents:", error);
-      toast.error("Failed to load documents");
-      return;
-    }
-
-    setDocuments(data || []);
-  };
-
-  const handleUploadDocument = async (file: File) => {
+  const handleUploadDocument = async (file) => {
     if (!appointmentId || !userId) return;
 
     const fileExt = file.name.split(".").pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${userId}/${appointmentId}/${fileName}`;
 
-    try {
-      // Upload file to storage
-      const { error: uploadError } = await supabase.storage
-        .from("medical-documents")
-        .upload(filePath, file);
+    const newDoc = {
+      id: "doc-" + Date.now(),
+      appointment_folder_id: appointmentId,
+      file_name: file.name,
+      file_path: filePath,
+      file_type: file.type,
+      file_size: file.size,
+      processing_status: "uploaded",
+      created_at: new Date().toISOString()
+    };
 
-      if (uploadError) throw uploadError;
-
-      // Create document record
-      const { error: dbError } = await supabase
-        .from("documents")
-        .insert({
-          appointment_folder_id: appointmentId,
-          file_name: file.name,
-          file_path: filePath,
-          file_type: file.type,
-          file_size: file.size,
-          processing_status: "uploaded",
-        });
-
-      if (dbError) throw dbError;
-
-      toast.success("Document uploaded successfully");
-      await fetchDocuments();
-      setUploadDialogOpen(false);
-    } catch (error: any) {
-      console.error("Error uploading document:", error);
-      toast.error("Failed to upload document");
-    }
+    const allDocs = JSON.parse(localStorage.getItem("documents") || "[]");
+    const updated = [newDoc, ...allDocs];
+    localStorage.setItem("documents", JSON.stringify(updated));
+    
+    setDocuments([newDoc, ...documents]);
+    toast.success("Document uploaded successfully");
+    setUploadDialogOpen(false);
   };
 
   if (loading) {

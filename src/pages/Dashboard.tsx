@@ -84,7 +84,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">HealthVault AI</h1>
-                <p className="text-xs text-muted-foreground">Welcome, {profile?.full_name || user?.email}</p>
+                <p className="text-xs text-muted-foreground">Welcome, {profile?.full_name || profile?.email}</p>
               </div>
             </div>
             <Button
