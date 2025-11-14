@@ -11,21 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, File } from "lucide-react";
 
-interface DocumentUploadDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onUpload: (file: File) => Promise<void>;
-}
-
 export const DocumentUploadDialog = ({
   open,
   onOpenChange,
   onUpload,
-}: DocumentUploadDialogProps) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+}) => {
+  const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
     }

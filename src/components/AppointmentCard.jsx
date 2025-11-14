@@ -1,19 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, FileText } from "lucide-react";
 
-interface AppointmentFolder {
-  id: string;
-  appointment_date: string;
-  notes: string | null;
-  created_at: string;
-}
-
-interface AppointmentCardProps {
-  appointment: AppointmentFolder;
-  onClick: () => void;
-}
-
-export const AppointmentCard = ({ appointment, onClick }: AppointmentCardProps) => {
+export const AppointmentCard = ({ appointment, onClick }) => {
   return (
     <Card
       className="cursor-pointer hover:shadow-hover transition-all border-border/50 shadow-card"

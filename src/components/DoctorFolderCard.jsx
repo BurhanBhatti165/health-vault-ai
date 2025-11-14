@@ -2,20 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Stethoscope, Calendar } from "lucide-react";
 
-interface DoctorFolder {
-  id: string;
-  doctor_name: string;
-  doctor_email: string | null;
-  specialization: string | null;
-  created_at: string;
-}
-
-interface DoctorFolderCardProps {
-  folder: DoctorFolder;
-  onClick: () => void;
-}
-
-export const DoctorFolderCard = ({ folder, onClick }: DoctorFolderCardProps) => {
+export const DoctorFolderCard = ({ folder, onClick }) => {
   return (
     <Card
       className="cursor-pointer hover:shadow-hover transition-all border-border/50 shadow-card"
