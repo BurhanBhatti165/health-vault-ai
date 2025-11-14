@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -31,77 +30,35 @@ const DoctorFolder = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
-    const initialize = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
-      await fetchFolderDetails();
-      await fetchAppointments();
-      setLoading(false);
-    };
-
-    initialize();
-  }, [doctorId, navigate]);
-
-  const fetchFolderDetails = async () => {
-    if (!doctorId) return;
-
-    const { data, error } = await supabase
-      .from("doctor_folders")
-      .select("*")
-      .eq("id", doctorId)
-      .single();
-
-    if (error) {
-      console.error("Error fetching folder:", error);
-      toast.error("Failed to load doctor folder");
+    if (!localStorage.getItem("user")) {
+      navigate("/auth");
+      return;
+    }
+    const folders = JSON.parse(localStorage.getItem("doctorFolders") || "[]");
+    const currentFolder = folders.find((f: DoctorFolder) => f.id === doctorId);
+    if (!currentFolder) {
       navigate("/dashboard");
       return;
     }
+    setFolder(currentFolder);
+    const apts = JSON.parse(localStorage.getItem("appointments") || "[]");
+    setAppointments(apts.filter((a: AppointmentFolder) => a.doctor_folder_id === doctorId));
+    setLoading(false);
+  }, [doctorId, navigate]);
 
-    setFolder(data);
-  };
-
-  const fetchAppointments = async () => {
-    if (!doctorId) return;
-
-    const { data, error } = await supabase
-      .from("appointment_folders")
-      .select("*")
-      .eq("doctor_folder_id", doctorId)
-      .order("appointment_date", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching appointments:", error);
-      toast.error("Failed to load appointments");
-      return;
-    }
-
-    setAppointments(data || []);
-  };
-
-  const handleCreateAppointment = async (data: { appointment_date: string; notes?: string }) => {
-    if (!doctorId) return;
-
-    const { error } = await supabase
-      .from("appointment_folders")
-      .insert({
-        doctor_folder_id: doctorId,
-        ...data,
-      });
-
-    if (error) {
-      console.error("Error creating appointment:", error);
-      toast.error("Failed to create appointment folder");
-      return;
-    }
-
-    toast.success("Appointment folder created successfully");
-    await fetchAppointments();
+  const handleCreateAppointment = (data: { appointment_date: string; notes?: string }) => {
+    const newApt: AppointmentFolder = {
+      id: "apt-" + Date.now(),
+      doctor_folder_id: doctorId!,
+      appointment_date: data.appointment_date,
+      notes: data.notes || null,
+      created_at: new Date().toISOString()
+    };
+    const updated = [newApt, ...appointments];
+    setAppointments(updated);
+    const all = JSON.parse(localStorage.getItem("appointments") || "[]");
+    localStorage.setItem("appointments", JSON.stringify([...all, newApt]));
+    toast.success("Appointment created");
     setCreateDialogOpen(false);
   };
 

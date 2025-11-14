@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Activity, LogOut, Plus, FolderPlus, FileText, Calendar } from "lucide-react";
@@ -26,96 +24,41 @@ interface DoctorFolder {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [doctorFolders, setDoctorFolders] = useState<DoctorFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
-    const initialize = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
-      setUser(session.user);
-      await fetchProfile(session.user.id);
-      await fetchDoctorFolders(session.user.id);
-      setLoading(false);
-    };
-
-    initialize();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
-        setUser(session.user);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    const user = localStorage.getItem("user");
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    setProfile(JSON.parse(user));
+    const saved = localStorage.getItem("doctorFolders");
+    setDoctorFolders(saved ? JSON.parse(saved) : []);
+    setLoading(false);
   }, [navigate]);
 
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-
-    if (error) {
-      console.error("Error fetching profile:", error);
-      toast.error("Failed to load profile");
-      return;
-    }
-
-    setProfile(data);
-  };
-
-  const fetchDoctorFolders = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("doctor_folders")
-      .select("*")
-      .eq("patient_id", userId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching doctor folders:", error);
-      toast.error("Failed to load doctor folders");
-      return;
-    }
-
-    setDoctorFolders(data || []);
-  };
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
+  const handleSignOut = () => {
+    localStorage.clear();
     toast.success("Signed out successfully");
     navigate("/auth");
   };
 
-  const handleCreateFolder = async (doctorData: { doctor_name: string; doctor_email?: string; specialization?: string }) => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from("doctor_folders")
-      .insert({
-        patient_id: user.id,
-        ...doctorData,
-      });
-
-    if (error) {
-      console.error("Error creating doctor folder:", error);
-      toast.error("Failed to create doctor folder");
-      return;
-    }
-
+  const handleCreateFolder = (doctorData: { doctor_name: string; doctor_email?: string; specialization?: string }) => {
+    const newFolder: DoctorFolder = {
+      id: "doc-" + Date.now(),
+      doctor_name: doctorData.doctor_name,
+      doctor_email: doctorData.doctor_email || null,
+      specialization: doctorData.specialization || null,
+      created_at: new Date().toISOString()
+    };
+    const updated = [newFolder, ...doctorFolders];
+    setDoctorFolders(updated);
+    localStorage.setItem("doctorFolders", JSON.stringify(updated));
     toast.success("Doctor folder created successfully");
-    await fetchDoctorFolders(user.id);
     setCreateDialogOpen(false);
   };
 

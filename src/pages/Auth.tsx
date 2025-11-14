@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,60 +18,46 @@ const Auth = () => {
   const [role, setRole] = useState<"patient" | "doctor">("patient");
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
+    const user = localStorage.getItem("user");
+    if (user) {
+      navigate("/dashboard");
+    }
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
+    setTimeout(() => {
+      const mockUser = {
+        id: "demo-user-id",
         email,
-        password,
-      });
-
-      if (error) throw error;
-      
+        full_name: "Demo User",
+        role: "patient"
+      };
+      localStorage.setItem("user", JSON.stringify(mockUser));
       toast.success("Welcome back!");
       navigate("/dashboard");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign in");
-    } finally {
       setLoading(false);
-    }
+    }, 500);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signUp({
+    setTimeout(() => {
+      const mockUser = {
+        id: "demo-user-" + Date.now(),
         email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-          data: {
-            full_name: fullName,
-            role: role,
-          },
-        },
-      });
-
-      if (error) throw error;
-      
+        full_name: fullName,
+        role
+      };
+      localStorage.setItem("user", JSON.stringify(mockUser));
       toast.success("Account created successfully!");
       navigate("/dashboard");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create account");
-    } finally {
       setLoading(false);
-    }
+    }, 500);
   };
 
   return (
