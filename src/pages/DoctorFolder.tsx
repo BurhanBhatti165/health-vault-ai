@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Activity, ArrowLeft, Calendar, Plus, FileText } from "lucide-react";
+import { Activity, ArrowLeft, Calendar, Plus, FileText, Search } from "lucide-react";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { CreateAppointmentDialog } from "@/components/CreateAppointmentDialog";
 
@@ -14,6 +15,7 @@ const DoctorFolder = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!localStorage.getItem("user")) {
@@ -47,6 +49,15 @@ const DoctorFolder = () => {
     toast.success("Appointment created");
     setCreateDialogOpen(false);
   };
+
+  const filteredAppointments = appointments.filter(appointment => {
+    const searchLower = searchQuery.toLowerCase();
+    const appointmentDate = new Date(appointment.appointment_date).toLocaleDateString();
+    return (
+      appointmentDate.toLowerCase().includes(searchLower) ||
+      (appointment.notes && appointment.notes.toLowerCase().includes(searchLower))
+    );
+  });
 
   if (loading) {
     return (
@@ -102,12 +113,36 @@ const DoctorFolder = () => {
               New Appointment
             </Button>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             Track your visits and medical documents by appointment date
           </p>
+          {appointments.length > 0 && (
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search appointments by date or notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          )}
         </div>
 
-        {appointments.length === 0 ? (
+        {filteredAppointments.length === 0 && searchQuery ? (
+          <Card className="shadow-card border-border/50">
+            <CardHeader className="text-center pb-6">
+              <div className="mx-auto mb-4 p-4 rounded-full bg-muted w-fit">
+                <Search className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <CardTitle className="text-2xl">No Results Found</CardTitle>
+              <CardDescription className="text-base">
+                No appointments match your search. Try a different search term.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : appointments.length === 0 ? (
           <Card className="shadow-card border-border/50">
             <CardHeader className="text-center pb-6">
               <div className="mx-auto mb-4 p-4 rounded-full bg-gradient-primary w-fit">
@@ -131,7 +166,7 @@ const DoctorFolder = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {appointments.map((appointment) => (
+            {filteredAppointments.map((appointment) => (
               <AppointmentCard
                 key={appointment.id}
                 appointment={appointment}

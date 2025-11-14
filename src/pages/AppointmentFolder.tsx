@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Activity, ArrowLeft, Upload, FileText, Loader2 } from "lucide-react";
+import { Activity, ArrowLeft, Upload, FileText, Loader2, Search } from "lucide-react";
 import { DocumentCard } from "@/components/DocumentCard";
 import { DocumentUploadDialog } from "@/components/DocumentUploadDialog";
 
@@ -16,6 +17,7 @@ const AppointmentFolder = () => {
   const [loading, setLoading] = useState(true);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const user = localStorage.getItem("user");
@@ -74,6 +76,14 @@ const AppointmentFolder = () => {
     setUploadDialogOpen(false);
   };
 
+  const filteredDocuments = documents.filter(doc => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      doc.file_name.toLowerCase().includes(searchLower) ||
+      doc.file_type.toLowerCase().includes(searchLower)
+    );
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
@@ -130,12 +140,36 @@ const AppointmentFolder = () => {
               Upload Document
             </Button>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             Medical records, prescriptions, and lab results for this appointment
           </p>
+          {documents.length > 0 && (
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search documents by name or type..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          )}
         </div>
 
-        {documents.length === 0 ? (
+        {filteredDocuments.length === 0 && searchQuery ? (
+          <Card className="shadow-card border-border/50">
+            <CardHeader className="text-center pb-6">
+              <div className="mx-auto mb-4 p-4 rounded-full bg-muted w-fit">
+                <Search className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <CardTitle className="text-2xl">No Results Found</CardTitle>
+              <CardDescription className="text-base">
+                No documents match your search. Try a different search term.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : documents.length === 0 ? (
           <Card className="shadow-card border-border/50">
             <CardHeader className="text-center pb-6">
               <div className="mx-auto mb-4 p-4 rounded-full bg-gradient-primary w-fit">
@@ -159,11 +193,11 @@ const AppointmentFolder = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {documents.map((document) => (
+            {filteredDocuments.map((document) => (
               <DocumentCard
                 key={document.id}
                 document={document}
-                userId={userId!}
+                userId={userId}
               />
             ))}
           </div>
