@@ -1,33 +1,21 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Activity, LogOut, Plus, FolderPlus, FileText, Calendar } from "lucide-react";
+import { Activity, LogOut, Plus, FolderPlus, FileText, Calendar, Search, Sparkles, Trash2 } from "lucide-react";
 import { DoctorFolderCard } from "@/components/DoctorFolderCard";
 import { CreateDoctorDialog } from "@/components/CreateDoctorDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-interface Profile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: string;
-}
-
-interface DoctorFolder {
-  id: string;
-  doctor_name: string;
-  doctor_email: string | null;
-  specialization: string | null;
-  created_at: string;
-}
+import { generateSampleData, clearAllData } from "@/utils/sampleDataGenerator";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [doctorFolders, setDoctorFolders] = useState<DoctorFolder[]>([]);
+  const [profile, setProfile] = useState(null);
+  const [doctorFolders, setDoctorFolders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const user = localStorage.getItem("user");
@@ -47,8 +35,8 @@ const Dashboard = () => {
     navigate("/auth");
   };
 
-  const handleCreateFolder = (doctorData: { doctor_name: string; doctor_email?: string; specialization?: string }) => {
-    const newFolder: DoctorFolder = {
+  const handleCreateFolder = (doctorData) => {
+    const newFolder = {
       id: "doc-" + Date.now(),
       doctor_name: doctorData.doctor_name,
       doctor_email: doctorData.doctor_email || null,
@@ -61,6 +49,27 @@ const Dashboard = () => {
     toast.success("Doctor folder created successfully");
     setCreateDialogOpen(false);
   };
+
+  const handleGenerateSampleData = () => {
+    const { doctorFolders: newDoctors } = generateSampleData();
+    setDoctorFolders(newDoctors);
+    toast.success(`Generated ${newDoctors.length} sample doctors with appointments and documents`);
+  };
+
+  const handleClearAllData = () => {
+    clearAllData();
+    setDoctorFolders([]);
+    toast.success("All data cleared");
+  };
+
+  const filteredFolders = doctorFolders.filter(folder => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      folder.doctor_name.toLowerCase().includes(searchLower) ||
+      (folder.specialization && folder.specialization.toLowerCase().includes(searchLower)) ||
+      (folder.doctor_email && folder.doctor_email.toLowerCase().includes(searchLower))
+    );
+  });
 
   if (loading) {
     return (
@@ -102,22 +111,66 @@ const Dashboard = () => {
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-3xl font-bold text-foreground">Your Medical Vault</h2>
-            <Button
-              onClick={() => setCreateDialogOpen(true)}
-              className="gap-2 shadow-hover hover:shadow-card transition-all"
-            >
-              <FolderPlus className="h-4 w-4" />
-              Add Doctor
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleGenerateSampleData}
+                variant="outline"
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Generate Sample Data
+              </Button>
+              {doctorFolders.length > 0 && (
+                <Button
+                  onClick={handleClearAllData}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Clear All
+                </Button>
+              )}
+              <Button
+                onClick={() => setCreateDialogOpen(true)}
+                className="gap-2 shadow-hover hover:shadow-card transition-all"
+              >
+                <FolderPlus className="h-4 w-4" />
+                Add Doctor
+              </Button>
+            </div>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             Organize your medical records by doctor and appointment date
           </p>
+          {doctorFolders.length > 0 && (
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search doctors by name or specialization..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          )}
         </div>
 
-        {doctorFolders.length === 0 ? (
+        {filteredFolders.length === 0 && searchQuery ? (
+          <Card className="shadow-card border-border/50">
+            <CardHeader className="text-center pb-6">
+              <div className="mx-auto mb-4 p-4 rounded-full bg-muted w-fit">
+                <Search className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <CardTitle className="text-2xl">No Results Found</CardTitle>
+              <CardDescription className="text-base">
+                No doctors match your search. Try a different search term.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : doctorFolders.length === 0 ? (
           <Card className="shadow-card border-border/50">
             <CardHeader className="text-center pb-6">
               <div className="mx-auto mb-4 p-4 rounded-full bg-gradient-primary w-fit">
@@ -141,7 +194,7 @@ const Dashboard = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {doctorFolders.map((folder) => (
+            {filteredFolders.map((folder) => (
               <DoctorFolderCard
                 key={folder.id}
                 folder={folder}
