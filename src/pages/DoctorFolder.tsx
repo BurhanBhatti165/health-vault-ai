@@ -7,25 +7,11 @@ import { Activity, ArrowLeft, Calendar, Plus, FileText } from "lucide-react";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { CreateAppointmentDialog } from "@/components/CreateAppointmentDialog";
 
-interface DoctorFolder {
-  id: string;
-  doctor_name: string;
-  doctor_email: string | null;
-  specialization: string | null;
-}
-
-interface AppointmentFolder {
-  id: string;
-  appointment_date: string;
-  notes: string | null;
-  created_at: string;
-}
-
 const DoctorFolder = () => {
-  const { doctorId } = useParams<{ doctorId: string }>();
+  const { doctorId } = useParams();
   const navigate = useNavigate();
-  const [folder, setFolder] = useState<DoctorFolder | null>(null);
-  const [appointments, setAppointments] = useState<AppointmentFolder[]>([]);
+  const [folder, setFolder] = useState(null);
+  const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
@@ -35,21 +21,21 @@ const DoctorFolder = () => {
       return;
     }
     const folders = JSON.parse(localStorage.getItem("doctorFolders") || "[]");
-    const currentFolder = folders.find((f: DoctorFolder) => f.id === doctorId);
+    const currentFolder = folders.find(f => f.id === doctorId);
     if (!currentFolder) {
       navigate("/dashboard");
       return;
     }
     setFolder(currentFolder);
     const apts = JSON.parse(localStorage.getItem("appointments") || "[]");
-    setAppointments(apts.filter((a: AppointmentFolder) => a.doctor_folder_id === doctorId));
+    setAppointments(apts.filter(a => a.doctor_folder_id === doctorId));
     setLoading(false);
   }, [doctorId, navigate]);
 
-  const handleCreateAppointment = (data: { appointment_date: string; notes?: string }) => {
-    const newApt: AppointmentFolder = {
+  const handleCreateAppointment = (data) => {
+    const newApt = {
       id: "apt-" + Date.now(),
-      doctor_folder_id: doctorId!,
+      doctor_folder_id: doctorId,
       appointment_date: data.appointment_date,
       notes: data.notes || null,
       created_at: new Date().toISOString()
