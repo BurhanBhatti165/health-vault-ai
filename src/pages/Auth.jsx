@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { loginSuccess, signupSuccess, setLoading } from "@/store/slices/authSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,22 +13,22 @@ import { Activity } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  const { loading, isAuthenticated } = useSelector((state) => state.auth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState("patient");
 
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (user) {
+    if (isAuthenticated) {
       navigate("/dashboard");
     }
-  }, [navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    dispatch(setLoading(true));
 
     setTimeout(() => {
       // Try to find existing user by email, otherwise create new
@@ -42,16 +44,15 @@ const Auth = () => {
         };
       }
       
-      localStorage.setItem("user", JSON.stringify(mockUser));
+      dispatch(loginSuccess(mockUser));
       toast.success("Signed in successfully!");
-      setLoading(false);
       navigate("/dashboard");
     }, 1000);
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    dispatch(setLoading(true));
 
     setTimeout(() => {
       const mockUser = {
@@ -61,14 +62,8 @@ const Auth = () => {
         role: role
       };
       
-      // Store user in users list for login lookup
-      const existingUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      existingUsers.push(mockUser);
-      localStorage.setItem("users", JSON.stringify(existingUsers));
-      
-      localStorage.setItem("user", JSON.stringify(mockUser));
+      dispatch(signupSuccess(mockUser));
       toast.success("Account created successfully!");
-      setLoading(false);
       navigate("/dashboard");
     }, 1000);
   };

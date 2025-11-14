@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "@/store/slices/authSlice";
+import { createDoctorFolder, setAllData, clearAllData as clearReduxData, setPatients } from "@/store/slices/medicalSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,36 +16,29 @@ import { generateSampleData, clearAllData } from "@/utils/sampleDataGenerator";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(null);
-  const [doctorFolders, setDoctorFolders] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [patients, setPatients] = useState([]);
+  const dispatch = useDispatch();
+  
+  // Get state from Redux
+  const { user: profile, isAuthenticated } = useSelector((state) => state.auth);
+  const { doctorFolders, appointments, patients } = useSelector((state) => state.medical);
+  
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (!user) {
+    if (!isAuthenticated) {
       navigate("/auth");
       return;
     }
     
-    const userData = JSON.parse(user);
-    setProfile(userData);
-    
-    // Load all data
-    const folders = JSON.parse(localStorage.getItem("doctorFolders") || "[]");
-    const allAppointments = JSON.parse(localStorage.getItem("appointments") || "[]");
+    // Load all users data
     const allUsers = JSON.parse(localStorage.getItem("users") || "[]");
     
-    setDoctorFolders(folders);
-    setAppointments(allAppointments);
-    
     // If user is a doctor, get their patients
-    if (userData.role === "doctor") {
+    if (profile?.role === "doctor") {
       // Get all doctor folders where this doctor's email matches
-      const doctorFoldersForThisDoctor = folders.filter(f => f.doctor_email === userData.email);
+      const doctorFoldersForThisDoctor = doctorFolders.filter(f => f.doctor_email === profile.email);
       
       // Get all unique patient IDs from these folders
       const patientIds = new Set();
@@ -53,12 +49,12 @@ const Dashboard = () => {
       });
       
       // Also check appointments directly
-      allAppointments.forEach(apt => {
-        const folder = folders.find(f => f.id === apt.doctor_folder_id);
-        if (folder && folder.doctor_email === userData.email && apt.patient_id) {
+      appointments.forEach(apt => {
+        const folder = doctorFolders.find(f => f.id === apt.doctor_folder_id);
+        if (folder && folder.doctor_email === profile.email && apt.patient_id) {
           patientIds.add(apt.patient_id);
         }
-        if (folder && folder.doctor_email === userData.email && folder.patient_id) {
+        if (folder && folder.doctor_email === profile.email && folder.patient_id) {
           patientIds.add(folder.patient_id);
         }
       });
@@ -67,10 +63,10 @@ const Dashboard = () => {
       const patientList = Array.from(patientIds).map(patientId => {
         const patientUser = allUsers.find(u => u.id === patientId);
         // Get appointments for this patient with this doctor
-        const patientAppointments = allAppointments.filter(apt => {
-          const folder = folders.find(f => f.id === apt.doctor_folder_id);
+        const patientAppointments = appointments.filter(apt => {
+          const folder = doctorFolders.find(f => f.id === apt.doctor_folder_id);
           const matchesPatient = apt.patient_id === patientId || folder?.patient_id === patientId;
-          const matchesDoctor = folder?.doctor_email === userData.email;
+          const matchesDoctor = folder?.doctor_email === profile.email;
           return matchesPatient && matchesDoctor;
         });
         return {
@@ -80,14 +76,14 @@ const Dashboard = () => {
         };
       });
       
-      setPatients(patientList);
+      dispatch(setPatients(patientList));
     }
     
     setLoading(false);
-  }, [navigate]);
+  }, [navigate, isAuthenticated, profile, doctorFolders, appointments, dispatch]);
 
   const handleSignOut = () => {
-    localStorage.removeItem("user");
+    dispatch(logout());
     toast.success("Signed out successfully");
     navigate("/auth");
   };
@@ -103,18 +99,14 @@ const Dashboard = () => {
       updated_at: new Date().toISOString()
     };
 
-    const updated = [newFolder, ...doctorFolders];
-    setDoctorFolders(updated);
-    localStorage.setItem("doctorFolders", JSON.stringify(updated));
-    
+    dispatch(createDoctorFolder(newFolder));
     toast.success("Doctor folder created successfully!");
     setCreateDialogOpen(false);
   };
 
   const handleGenerateSampleData = () => {
     const data = generateSampleData(profile?.id);
-    setDoctorFolders(data.doctorFolders);
-    setAppointments(data.appointments);
+    dispatch(setAllData(data));
     toast.success("Sample data generated successfully!");
     // Reload to refresh doctor view if needed
     window.location.reload();
@@ -122,9 +114,7 @@ const Dashboard = () => {
 
   const handleClearAllData = () => {
     clearAllData();
-    setDoctorFolders([]);
-    setAppointments([]);
-    setPatients([]);
+    dispatch(clearReduxData());
     toast.success("All data cleared successfully!");
   };
 
