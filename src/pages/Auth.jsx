@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Activity } from "lucide-react";
 
@@ -28,12 +29,18 @@ const Auth = () => {
     setLoading(true);
 
     setTimeout(() => {
-      const mockUser = {
-        id: "user-" + Date.now(),
-        email: email,
-        full_name: email.split("@")[0],
-        role: "patient"
-      };
+      // Try to find existing user by email, otherwise create new
+      const existingUsers = JSON.parse(localStorage.getItem("users") || "[]");
+      let mockUser = existingUsers.find(u => u.email === email);
+      
+      if (!mockUser) {
+        mockUser = {
+          id: "user-" + Date.now(),
+          email: email,
+          full_name: email.split("@")[0],
+          role: "patient"
+        };
+      }
       
       localStorage.setItem("user", JSON.stringify(mockUser));
       toast.success("Signed in successfully!");
@@ -53,6 +60,11 @@ const Auth = () => {
         full_name: fullName,
         role: role
       };
+      
+      // Store user in users list for login lookup
+      const existingUsers = JSON.parse(localStorage.getItem("users") || "[]");
+      existingUsers.push(mockUser);
+      localStorage.setItem("users", JSON.stringify(existingUsers));
       
       localStorage.setItem("user", JSON.stringify(mockUser));
       toast.success("Account created successfully!");
@@ -133,6 +145,18 @@ const Auth = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-role">I am a</Label>
+                  <Select value={role} onValueChange={setRole}>
+                    <SelectTrigger id="signup-role">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="patient">Patient</SelectItem>
+                      <SelectItem value="doctor">Doctor</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>

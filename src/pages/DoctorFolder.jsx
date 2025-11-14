@@ -44,9 +44,11 @@ const DoctorFolder = () => {
   }, [doctorId, navigate]);
 
   const handleCreateAppointment = (data) => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
     const newAppointment = {
       id: "apt-" + Date.now(),
       doctor_folder_id: doctorId,
+      patient_id: doctorFolder?.patient_id || user.id,
       appointment_date: data.appointment_date,
       notes: data.notes,
       created_at: new Date().toISOString(),

@@ -51,6 +51,7 @@ export const generateSampleData = () => {
       appointments.push({
         id: `apt-sample-${doctor.id}-${i + 1}`,
         doctor_folder_id: doctor.id,
+        patient_id: doctor.patient_id || userId,
         appointment_date: appointmentDate.toISOString().split('T')[0],
         notes: appointmentNotes[Math.floor(Math.random() * appointmentNotes.length)],
         created_at: appointmentDate.toISOString(),
