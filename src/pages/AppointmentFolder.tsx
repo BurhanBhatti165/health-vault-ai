@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Activity, ArrowLeft, Upload, FileText, Loader2, Search } from "lucide-react";
+import { Activity, ArrowLeft, Upload, FileText, Loader2, Search, Calendar as CalendarIcon } from "lucide-react";
 import { DocumentCard } from "@/components/DocumentCard";
 import { DocumentUploadDialog } from "@/components/DocumentUploadDialog";
+import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 
 const AppointmentFolder = () => {
   const { appointmentId } = useParams();
@@ -18,6 +19,8 @@ const AppointmentFolder = () => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [userId, setUserId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [previewDocument, setPreviewDocument] = useState(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     const user = localStorage.getItem("user");
@@ -83,6 +86,11 @@ const AppointmentFolder = () => {
       doc.file_type.toLowerCase().includes(searchLower)
     );
   });
+
+  const handlePreviewDocument = (doc) => {
+    setPreviewDocument(doc);
+    setPreviewOpen(true);
+  };
 
   if (loading) {
     return (
@@ -198,6 +206,7 @@ const AppointmentFolder = () => {
                 key={document.id}
                 document={document}
                 userId={userId}
+                onPreview={handlePreviewDocument}
               />
             ))}
           </div>
@@ -208,6 +217,12 @@ const AppointmentFolder = () => {
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
         onUpload={handleUploadDocument}
+      />
+
+      <DocumentPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        document={previewDocument}
       />
     </div>
   );
