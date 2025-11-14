@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Activity, ArrowLeft, Calendar, Plus, FileText, Search } from "lucide-react";
+import { Activity, ArrowLeft, Calendar as CalendarIconLucide, Plus, FileText, Search } from "lucide-react";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { CreateAppointmentDialog } from "@/components/CreateAppointmentDialog";
+import { DateRangePicker } from "@/components/DateRangePicker";
 
 const DoctorFolder = () => {
   const { doctorId } = useParams();
@@ -16,6 +17,8 @@ const DoctorFolder = () => {
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   useEffect(() => {
     if (!localStorage.getItem("user")) {
@@ -52,12 +55,36 @@ const DoctorFolder = () => {
 
   const filteredAppointments = appointments.filter(appointment => {
     const searchLower = searchQuery.toLowerCase();
-    const appointmentDate = new Date(appointment.appointment_date).toLocaleDateString();
-    return (
-      appointmentDate.toLowerCase().includes(searchLower) ||
-      (appointment.notes && appointment.notes.toLowerCase().includes(searchLower))
-    );
+    const appointmentDate = new Date(appointment.appointment_date);
+    const appointmentDateString = appointmentDate.toLocaleDateString();
+    
+    // Text search filter
+    const matchesSearch = 
+      appointmentDateString.toLowerCase().includes(searchLower) ||
+      (appointment.notes && appointment.notes.toLowerCase().includes(searchLower));
+    
+    // Date range filter
+    const matchesDateRange = (() => {
+      if (!startDate && !endDate) return true;
+      
+      if (startDate && !endDate) {
+        return appointmentDate >= startDate;
+      }
+      
+      if (!startDate && endDate) {
+        return appointmentDate <= endDate;
+      }
+      
+      return appointmentDate >= startDate && appointmentDate <= endDate;
+    })();
+    
+    return matchesSearch && matchesDateRange;
   });
+
+  const handleClearDateRange = () => {
+    setStartDate(null);
+    setEndDate(null);
+  };
 
   if (loading) {
     return (
@@ -117,15 +144,27 @@ const DoctorFolder = () => {
             Track your visits and medical documents by appointment date
           </p>
           {appointments.length > 0 && (
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search appointments by date or notes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+            <div className="space-y-4">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search appointments by date or notes..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Filter by date range:</p>
+                <DateRangePicker
+                  startDate={startDate}
+                  endDate={endDate}
+                  onStartDateChange={setStartDate}
+                  onEndDateChange={setEndDate}
+                  onClear={handleClearDateRange}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -146,7 +185,7 @@ const DoctorFolder = () => {
           <Card className="shadow-card border-border/50">
             <CardHeader className="text-center pb-6">
               <div className="mx-auto mb-4 p-4 rounded-full bg-gradient-primary w-fit">
-                <Calendar className="h-8 w-8 text-white" />
+                <CalendarIconLucide className="h-8 w-8 text-white" />
               </div>
               <CardTitle className="text-2xl">No Appointments Yet</CardTitle>
               <CardDescription className="text-base">
