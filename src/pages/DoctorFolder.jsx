@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Activity, ArrowLeft, Calendar as CalendarIconLucide, Plus, FileText, Search } from "lucide-react";
+import { Activity, ArrowLeft, Plus, Calendar, Search } from "lucide-react";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { CreateAppointmentDialog } from "@/components/CreateAppointmentDialog";
 import { DateRangePicker } from "@/components/DateRangePicker";
@@ -12,79 +12,71 @@ import { DateRangePicker } from "@/components/DateRangePicker";
 const DoctorFolder = () => {
   const { doctorId } = useParams();
   const navigate = useNavigate();
-  const [folder, setFolder] = useState(null);
+  const [doctorFolder, setDoctorFolder] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  const [dateRange, setDateRange] = useState({ from: null, to: null });
 
   useEffect(() => {
-    if (!localStorage.getItem("user")) {
+    const user = localStorage.getItem("user");
+    if (!user) {
       navigate("/auth");
       return;
     }
+    
     const folders = JSON.parse(localStorage.getItem("doctorFolders") || "[]");
-    const currentFolder = folders.find(f => f.id === doctorId);
-    if (!currentFolder) {
+    const folder = folders.find(f => f.id === doctorId);
+    
+    if (!folder) {
       navigate("/dashboard");
       return;
     }
-    setFolder(currentFolder);
-    const apts = JSON.parse(localStorage.getItem("appointments") || "[]");
-    setAppointments(apts.filter(a => a.doctor_folder_id === doctorId));
+    
+    setDoctorFolder(folder);
+    
+    const allAppointments = JSON.parse(localStorage.getItem("appointments") || "[]");
+    const doctorAppointments = allAppointments.filter(a => a.doctor_folder_id === doctorId);
+    setAppointments(doctorAppointments);
+    
     setLoading(false);
   }, [doctorId, navigate]);
 
   const handleCreateAppointment = (data) => {
-    const newApt = {
+    const newAppointment = {
       id: "apt-" + Date.now(),
       doctor_folder_id: doctorId,
       appointment_date: data.appointment_date,
-      notes: data.notes || null,
-      created_at: new Date().toISOString()
+      notes: data.notes,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
-    const updated = [newApt, ...appointments];
-    setAppointments(updated);
-    const all = JSON.parse(localStorage.getItem("appointments") || "[]");
-    localStorage.setItem("appointments", JSON.stringify([...all, newApt]));
-    toast.success("Appointment created");
+
+    const allAppointments = JSON.parse(localStorage.getItem("appointments") || "[]");
+    const updated = [newAppointment, ...allAppointments];
+    localStorage.setItem("appointments", JSON.stringify(updated));
+    
+    setAppointments([newAppointment, ...appointments]);
+    toast.success("Appointment folder created successfully!");
     setCreateDialogOpen(false);
   };
 
   const filteredAppointments = appointments.filter(appointment => {
     const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = appointment.notes?.toLowerCase().includes(searchLower) ||
+      new Date(appointment.appointment_date).toLocaleDateString().toLowerCase().includes(searchLower);
+    
+    if (!dateRange.from || !dateRange.to) return matchesSearch;
+    
     const appointmentDate = new Date(appointment.appointment_date);
-    const appointmentDateString = appointmentDate.toLocaleDateString();
+    const fromDate = new Date(dateRange.from);
+    const toDate = new Date(dateRange.to);
     
-    // Text search filter
-    const matchesSearch = 
-      appointmentDateString.toLowerCase().includes(searchLower) ||
-      (appointment.notes && appointment.notes.toLowerCase().includes(searchLower));
-    
-    // Date range filter
-    const matchesDateRange = (() => {
-      if (!startDate && !endDate) return true;
-      
-      if (startDate && !endDate) {
-        return appointmentDate >= startDate;
-      }
-      
-      if (!startDate && endDate) {
-        return appointmentDate <= endDate;
-      }
-      
-      return appointmentDate >= startDate && appointmentDate <= endDate;
-    })();
+    const matchesDateRange = appointmentDate >= fromDate && appointmentDate <= toDate;
     
     return matchesSearch && matchesDateRange;
   });
-
-  const handleClearDateRange = () => {
-    setStartDate(null);
-    setEndDate(null);
-  };
 
   if (loading) {
     return (
@@ -97,7 +89,7 @@ const DoctorFolder = () => {
     );
   }
 
-  if (!folder) return null;
+  if (!doctorFolder) return null;
 
   return (
     <div className="min-h-screen bg-gradient-hero">
@@ -118,10 +110,10 @@ const DoctorFolder = () => {
                 <Activity className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">{folder.doctor_name}</h1>
-                <p className="text-xs text-muted-foreground">
-                  {folder.specialization || "General Practice"}
-                </p>
+                <h1 className="text-xl font-bold text-foreground">{doctorFolder.doctor_name}</h1>
+                {doctorFolder.specialization && (
+                  <p className="text-xs text-muted-foreground">{doctorFolder.specialization}</p>
+                )}
               </div>
             </div>
           </div>
@@ -130,7 +122,7 @@ const DoctorFolder = () => {
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-3xl font-bold text-foreground">Appointments</h2>
             <Button
               onClick={() => setCreateDialogOpen(true)}
@@ -141,11 +133,12 @@ const DoctorFolder = () => {
             </Button>
           </div>
           <p className="text-muted-foreground mb-4">
-            Track your visits and medical documents by appointment date
+            Track your appointments and medical visits with {doctorFolder.doctor_name}
           </p>
+          
           {appointments.length > 0 && (
-            <div className="space-y-4">
-              <div className="relative max-w-md">
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
@@ -155,21 +148,15 @@ const DoctorFolder = () => {
                   className="pl-10"
                 />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Filter by date range:</p>
-                <DateRangePicker
-                  startDate={startDate}
-                  endDate={endDate}
-                  onStartDateChange={setStartDate}
-                  onEndDateChange={setEndDate}
-                  onClear={handleClearDateRange}
-                />
-              </div>
+              <DateRangePicker
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+              />
             </div>
           )}
         </div>
 
-        {filteredAppointments.length === 0 && searchQuery ? (
+        {filteredAppointments.length === 0 && (searchQuery || dateRange.from) ? (
           <Card className="shadow-card border-border/50">
             <CardHeader className="text-center pb-6">
               <div className="mx-auto mb-4 p-4 rounded-full bg-muted w-fit">
@@ -177,7 +164,7 @@ const DoctorFolder = () => {
               </div>
               <CardTitle className="text-2xl">No Results Found</CardTitle>
               <CardDescription className="text-base">
-                No appointments match your search. Try a different search term.
+                No appointments match your search or date range. Try adjusting your filters.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -185,11 +172,11 @@ const DoctorFolder = () => {
           <Card className="shadow-card border-border/50">
             <CardHeader className="text-center pb-6">
               <div className="mx-auto mb-4 p-4 rounded-full bg-gradient-primary w-fit">
-                <CalendarIconLucide className="h-8 w-8 text-white" />
+                <Calendar className="h-8 w-8 text-white" />
               </div>
               <CardTitle className="text-2xl">No Appointments Yet</CardTitle>
               <CardDescription className="text-base">
-                Create an appointment folder to start organizing medical records by date
+                Create your first appointment folder to organize documents by visit date
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center pb-8">

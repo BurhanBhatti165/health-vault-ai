@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Activity, ArrowLeft, Upload, FileText, Loader2, Search, Calendar as CalendarIcon } from "lucide-react";
+import { Activity, ArrowLeft, Upload, FileText, Search } from "lucide-react";
 import { DocumentCard } from "@/components/DocumentCard";
 import { DocumentUploadDialog } from "@/components/DocumentUploadDialog";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";

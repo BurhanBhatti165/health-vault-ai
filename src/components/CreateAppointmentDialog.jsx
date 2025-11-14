@@ -12,21 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-interface CreateAppointmentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (data: { appointment_date: string; notes?: string }) => void;
-}
-
 export const CreateAppointmentDialog = ({
   open,
   onOpenChange,
   onSubmit,
-}: CreateAppointmentDialogProps) => {
+}) => {
   const [appointmentDate, setAppointmentDate] = useState("");
   const [notes, setNotes] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit({
       appointment_date: appointmentDate,

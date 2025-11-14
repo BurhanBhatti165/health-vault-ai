@@ -11,18 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-interface CreateDoctorDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit: (data: { doctor_name: string; doctor_email?: string; specialization?: string }) => void;
-}
-
-export const CreateDoctorDialog = ({ open, onOpenChange, onSubmit }: CreateDoctorDialogProps) => {
+export const CreateDoctorDialog = ({ open, onOpenChange, onSubmit }) => {
   const [doctorName, setDoctorName] = useState("");
   const [doctorEmail, setDoctorEmail] = useState("");
   const [specialization, setSpecialization] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit({
       doctor_name: doctorName,
