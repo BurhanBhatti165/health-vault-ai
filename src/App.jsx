@@ -6,7 +6,7 @@ import { Provider } from "react-redux";
 import store from "./store";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/Dashboard_New";
 import DoctorFolder from "./pages/DoctorFolder";
 import AppointmentFolder from "./pages/AppointmentFolder";
 import NotFound from "./pages/NotFound";
