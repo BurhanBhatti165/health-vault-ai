@@ -6,9 +6,11 @@ import { Provider } from "react-redux";
 import store from "./store";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard_New";
-import DoctorFolder from "./pages/DoctorFolder";
-import AppointmentFolder from "./pages/AppointmentFolder";
+import Dashboard from "./pages/Dashboard_API";
+import CreateAppointment from "./pages/CreateAppointment";
+import DoctorAppointments from "./pages/DoctorAppointments";
+import PatientAppointments from "./pages/PatientAppointments";
+import AppointmentDetail from "./pages/AppointmentDetail";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -21,8 +23,10 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/doctor/:doctorId" element={<DoctorFolder />} />
-          <Route path="/appointment/:appointmentId" element={<AppointmentFolder />} />
+          <Route path="/appointments/new" element={<CreateAppointment />} />
+          <Route path="/doctor/:doctorId" element={<DoctorAppointments />} />
+          <Route path="/patient/:patientId" element={<PatientAppointments />} />
+          <Route path="/appointment/:appointmentId" element={<AppointmentDetail />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

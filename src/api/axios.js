@@ -13,21 +13,30 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+    console.log('🔐 [Axios] Request:', config.method.toUpperCase(), config.url);
+    console.log('🔐 [Axios] Token present:', !!token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => {
+    console.error('❌ [Axios] Request error:', error);
     return Promise.reject(error);
   }
 );
 
 // Handle response errors
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ [Axios] Response:', response.status, response.config.url);
+    return response;
+  },
   (error) => {
+    console.error('❌ [Axios] Response error:', error.response?.status, error.config?.url);
+    console.error('❌ [Axios] Error data:', error.response?.data);
     if (error.response?.status === 401) {
+      console.log('⚠️ [Axios] Unauthorized, clearing auth and redirecting...');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/';

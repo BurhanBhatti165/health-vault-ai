@@ -5,6 +5,7 @@ const initialState = {
   appointments: [],
   documents: [],
   patients: [],
+  groupedCards: [], // For doctor/patient cards with appointments
   loading: false,
 };
 
@@ -83,6 +84,11 @@ const medicalSlice = createSlice({
       state.patients = action.payload;
     },
     
+    // Grouped cards (from API)
+    setGroupedCards: (state, action) => {
+      state.groupedCards = action.payload;
+    },
+    
     // Bulk operations
     setAllData: (state, action) => {
       const { doctorFolders, appointments, documents } = action.payload;
@@ -127,6 +133,7 @@ export const {
   deleteDocument,
   updateDocument,
   setPatients,
+  setGroupedCards,
   setAllData,
   clearAllData,
   setLoading,

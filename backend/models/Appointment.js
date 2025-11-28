@@ -1,5 +1,28 @@
 import mongoose from 'mongoose';
 
+const documentSchema = new mongoose.Schema({
+  cloudStorageURL: {
+    type: String,
+    required: true
+  },
+  fileName: {
+    type: String,
+    required: true
+  },
+  fileType: {
+    type: String,
+    required: true
+  },
+  ocrText: {
+    type: String,
+    default: ''
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const appointmentSchema = new mongoose.Schema({
   patientId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -15,6 +38,12 @@ const appointmentSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  documents: [documentSchema],
+  notes: {
+    type: String,
+    trim: true
+  },
+  // Legacy fields for backward compatibility
   cloudStorageURL: {
     type: String,
     default: ''
@@ -28,10 +57,6 @@ const appointmentSchema = new mongoose.Schema({
     trim: true
   },
   fileType: {
-    type: String,
-    trim: true
-  },
-  notes: {
     type: String,
     trim: true
   }

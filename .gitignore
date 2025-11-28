@@ -94,3 +94,57 @@ Desktop.ini
 *.local
 .vercel
 .turbo
+
+# ============================================
+# PROJECT SPECIFIC - HEALTH VAULT AI
+# ============================================
+
+# Uploaded files (medical documents)
+uploads/
+uploads/*
+!uploads/.gitkeep
+
+# Database files (if using local DB)
+*.db
+*.sqlite
+*.sqlite3
+
+# MongoDB dumps
+dump/
+*.bson
+
+# Cloudinary cache
+.cloudinary/
+
+# Documentation that may contain sensitive info
+# (Uncomment if you don't want to share these)
+# IMPLEMENTATION_SUMMARY.md
+# DEBUGGING_GUIDE.md
+# EDIT_APPOINTMENT_FEATURE.md
+# MULTIPLE_DOCUMENTS_FEATURE.md
+
+# Lock files (uncomment the one you DON'T use)
+# package-lock.json  # if using yarn or pnpm
+# yarn.lock          # if using npm or pnpm
+# pnpm-lock.yaml     # if using npm or yarn
+# bun.lockb          # if using npm, yarn, or pnpm
+
+
+# Local configuration overrides
+config.local.js
+*.local.json
+
+# Postman collections with sensitive data
+*.postman_collection.json
+*.postman_environment.json
+
+# SSL certificates
+*.pem
+*.key
+*.cert
+*.crt
+
+# Backup files
+*.backup
+*_backup
+backup/
