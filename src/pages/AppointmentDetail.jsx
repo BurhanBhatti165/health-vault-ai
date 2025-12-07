@@ -2,11 +2,21 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { appointmentAPI } from "@/api/appointments";
+import { chatAPI } from "@/api/chat";
+import { langGraphAPI } from "@/api/langgraph";
+import { extractionAPI } from "@/api/extraction";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { ArrowLeft, Calendar, FileText, Download, Eye, Trash2, Edit2, Save, X, Upload } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Download, Eye, Trash2, Edit2, Save, X, Upload, MessageSquare, Send, Bot, User, Sparkles, ChevronDown, Zap, ScanText } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
 
 const AppointmentDetail = () => {
@@ -20,11 +30,27 @@ const AppointmentDetail = () => {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState("");
   const [uploading, setUploading] = useState(false);
+  
+  // Chat state
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [loadingChat, setLoadingChat] = useState(false);
+  const chatEndRef = useRef(null);
+  
+  // LangGraph state
+  const [processingDoc, setProcessingDoc] = useState(null);
 
   useEffect(() => {
     console.log("🔍 [AppointmentDetail] Component mounted, appointmentId:", appointmentId);
     loadAppointment();
+    loadChatMessages();
   }, [appointmentId]);
+
+  useEffect(() => {
+    // Scroll to bottom when new messages arrive
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const loadAppointment = async () => {
     console.log("📡 [AppointmentDetail] Loading appointment...");
@@ -40,6 +66,84 @@ const AppointmentDetail = () => {
       toast.error("Failed to load appointment");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadChatMessages = async () => {
+    console.log("💬 [AppointmentDetail] Loading chat messages...");
+    try {
+      setLoadingChat(true);
+      const response = await chatAPI.getChatMessages(appointmentId);
+      console.log("✅ [AppointmentDetail] Chat messages loaded:", response.data.messages);
+      setChatMessages(response.data.messages || []);
+    } catch (error) {
+      console.error("❌ [AppointmentDetail] Error loading chat:", error);
+      // Don't show error toast for chat loading failure
+    } finally {
+      setLoadingChat(false);
+    }
+  };
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || sendingMessage) return;
+
+    const messageText = chatInput.trim();
+    setChatInput("");
+
+    console.log("💬 [AppointmentDetail] Sending message:", messageText);
+    try {
+      setSendingMessage(true);
+      const response = await chatAPI.sendMessage(appointmentId, messageText);
+      console.log("✅ [AppointmentDetail] Message sent:", response.data);
+      
+      // Add both user and AI messages to chat
+      setChatMessages(prev => [...prev, response.data.userMessage, response.data.aiMessage]);
+    } catch (error) {
+      console.error("❌ [AppointmentDetail] Error sending message:", error);
+      toast.error("Failed to send message");
+      setChatInput(messageText); // Restore message on error
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleProcessWithLangGraph = async (documentId) => {
+    console.log("🔬 [AppointmentDetail] Processing document with LangGraph:", documentId);
+    try {
+      setProcessingDoc(documentId);
+      const response = await langGraphAPI.processDocument(appointmentId, documentId);
+      console.log("✅ [AppointmentDetail] LangGraph processing complete:", response);
+      
+      // Reload appointment to get updated data
+      await loadAppointment();
+      
+      toast.success("Document processed with AI workflow!");
+    } catch (error) {
+      console.error("❌ [AppointmentDetail] Error processing with LangGraph:", error);
+      toast.error("Failed to process document");
+    } finally {
+      setProcessingDoc(null);
+    }
+  };
+
+  const handleExtractWithMethod = async (documentId, method) => {
+    console.log(`🔍 [AppointmentDetail] Extracting with ${method}:`, documentId);
+    try {
+      setProcessingDoc(documentId);
+      const response = await extractionAPI.extractDocument(appointmentId, documentId, method);
+      console.log("✅ [AppointmentDetail] Extraction complete:", response);
+      
+      // Reload appointment to get updated data
+      await loadAppointment();
+      
+      const methodName = method === 'gemini' ? 'Gemini Vision' : 'OCR.space';
+      toast.success(`Document extracted with ${methodName}!`);
+    } catch (error) {
+      console.error("❌ [AppointmentDetail] Error extracting:", error);
+      toast.error("Failed to extract document");
+    } finally {
+      setProcessingDoc(null);
     }
   };
 
@@ -348,6 +452,42 @@ const AppointmentDetail = () => {
                       </div>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={processingDoc === doc._id}
+                            className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:from-purple-600 hover:to-pink-600"
+                          >
+                            <Sparkles className="h-4 w-4" />
+                            {processingDoc === doc._id ? "Processing..." : "AI Extract"}
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-64">
+                          <DropdownMenuItem
+                            onClick={() => handleExtractWithMethod(doc._id, 'gemini')}
+                            className="cursor-pointer"
+                          >
+                            <Zap className="h-4 w-4 mr-2 text-purple-500" />
+                            <div className="flex flex-col">
+                              <span className="font-medium">Gemini Vision</span>
+                              <span className="text-xs text-muted-foreground">Quick structured extraction</span>
+                            </div>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleProcessWithLangGraph(doc._id)}
+                            className="cursor-pointer"
+                          >
+                            <Sparkles className="h-4 w-4 mr-2 text-pink-500" />
+                            <div className="flex flex-col">
+                              <span className="font-medium">LangGraph Workflow</span>
+                              <span className="text-xs text-muted-foreground">Full analysis + patient history</span>
+                            </div>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <Button
                         variant="outline"
                         size="sm"
@@ -396,30 +536,205 @@ const AppointmentDetail = () => {
           </CardContent>
         </Card>
 
-        {/* OCR Text from Documents */}
+        {/* Extracted Medical Data */}
         {appointment.documents && appointment.documents.some(doc => doc.ocrText) && (
-          <Card className="shadow-card">
+          <Card className="mb-6 shadow-card">
             <CardHeader>
-              <CardTitle className="text-lg">Extracted Text (OCR)</CardTitle>
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-full bg-gradient-primary">
+                  <Sparkles className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">AI Extracted Medical Data</CardTitle>
+                  <CardDescription>Structured information from documents</CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {appointment.documents.map((doc) => (
-                doc.ocrText && (
+              {appointment.documents.map((doc) => {
+                if (!doc.ocrText) return null;
+                
+                // Try to parse as JSON for better display
+                let parsedData = null;
+                try {
+                  parsedData = JSON.parse(doc.ocrText);
+                } catch (e) {
+                  // Not JSON, display as text
+                }
+                
+                return (
                   <div key={doc._id}>
-                    <div className="text-sm font-medium mb-2 text-muted-foreground">
+                    <div className="text-sm font-medium mb-3 text-muted-foreground flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
                       From: {doc.fileName}
                     </div>
-                    <div className="bg-muted/30 p-4 rounded-lg">
-                      <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-mono">
-                        {doc.ocrText}
-                      </pre>
-                    </div>
+                    
+                    {parsedData ? (
+                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-4 rounded-lg space-y-3 border border-purple-200 dark:border-purple-800">
+                        {parsedData.document_type && (
+                          <div>
+                            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase">Document Type</span>
+                            <p className="text-sm mt-1">{parsedData.document_type}</p>
+                          </div>
+                        )}
+                        
+                        {parsedData.diagnosis && parsedData.diagnosis !== "Not specified" && (
+                          <div>
+                            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase">Diagnosis</span>
+                            <p className="text-sm mt-1 font-medium">{parsedData.diagnosis}</p>
+                          </div>
+                        )}
+                        
+                        {parsedData.medicines && parsedData.medicines.length > 0 && (
+                          <div>
+                            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase">Medicines</span>
+                            <ul className="text-sm mt-1 space-y-1">
+                              {parsedData.medicines.map((med, idx) => (
+                                <li key={idx} className="flex items-start gap-2">
+                                  <span className="text-purple-500">•</span>
+                                  <span>{med}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {parsedData.doctor_name && parsedData.doctor_name !== "Not specified" && (
+                          <div>
+                            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase">Doctor</span>
+                            <p className="text-sm mt-1">{parsedData.doctor_name}</p>
+                          </div>
+                        )}
+                        
+                        {parsedData.date && parsedData.date !== "Not specified" && (
+                          <div>
+                            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase">Date</span>
+                            <p className="text-sm mt-1">{parsedData.date}</p>
+                          </div>
+                        )}
+                        
+                        {parsedData.instructions && parsedData.instructions !== "Not specified" && (
+                          <div>
+                            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase">Instructions</span>
+                            <p className="text-sm mt-1">{parsedData.instructions}</p>
+                          </div>
+                        )}
+                        
+                        {parsedData.additional_findings && parsedData.additional_findings !== "Not specified" && (
+                          <div>
+                            <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase">Additional Findings</span>
+                            <p className="text-sm mt-1">{parsedData.additional_findings}</p>
+                          </div>
+                        )}
+                        
+                        {parsedData.raw_text && (
+                          <details className="mt-2">
+                            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                              View raw extraction
+                            </summary>
+                            <pre className="text-xs mt-2 p-2 bg-muted/50 rounded overflow-x-auto">
+                              {parsedData.raw_text}
+                            </pre>
+                          </details>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="bg-muted/30 p-4 rounded-lg">
+                        <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-mono">
+                          {doc.ocrText}
+                        </pre>
+                      </div>
+                    )}
                   </div>
-                )
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         )}
+
+        {/* AI Assistant Chat */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-gradient-primary">
+                <MessageSquare className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">AI Medical Assistant</CardTitle>
+                <CardDescription>
+                  Ask questions about this appointment, documents, or medical information
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Chat Messages */}
+            <div className="mb-4 h-96 overflow-y-auto border border-border/50 rounded-lg p-4 bg-muted/10">
+              {loadingChat ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  Loading chat...
+                </div>
+              ) : chatMessages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                  <Bot className="h-12 w-12 mb-3 opacity-50" />
+                  <p className="font-medium">Start a conversation</p>
+                  <p className="text-sm mt-1">Ask me anything about this appointment</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {chatMessages.map((msg, index) => (
+                    <div
+                      key={msg._id || index}
+                      className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {msg.sender === 'ai' && (
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
+                          <Bot className="h-5 w-5 text-white" />
+                        </div>
+                      )}
+                      <div
+                        className={`max-w-[80%] rounded-lg p-3 ${
+                          msg.sender === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                        <p className="text-xs mt-1 opacity-70">
+                          {new Date(msg.createdAt).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                      {msg.sender === 'user' && (
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                          <User className="h-5 w-5 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div ref={chatEndRef} />
+                </div>
+              )}
+            </div>
+
+            {/* Chat Input */}
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <Input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Ask about this appointment..."
+                disabled={sendingMessage}
+                className="flex-1"
+              />
+              <Button type="submit" disabled={sendingMessage || !chatInput.trim()} className="gap-2">
+                <Send className="h-4 w-4" />
+                {sendingMessage ? "Sending..." : "Send"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );

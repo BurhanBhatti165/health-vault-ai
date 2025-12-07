@@ -9,10 +9,10 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-// Get user's chat history with AI assistant
-router.get('/messages', getChatMessages);
+// Get chat history for a specific appointment
+router.get('/messages/:appointmentId', getChatMessages);
 
-// Send message to AI assistant
-router.post('/send', sendMessage);
+// Send message to AI assistant for specific appointment
+router.post('/send/:appointmentId', sendMessage);
 
 export default router;

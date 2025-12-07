@@ -4,15 +4,11 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/store/slices/authSlice";
 import { setGroupedCards, setLoading as setReduxLoading } from "@/store/slices/medicalSlice";
 import { appointmentAPI } from "@/api/appointments";
-import { chatAPI } from "@/api/chat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Activity, Plus, Search, LogOut, Calendar, FileText, MessageSquare, Settings } from "lucide-react";
-import ChatBot from "@/components/ChatBot";
+import { Activity, Plus, Search, LogOut, Calendar, FileText, Settings } from "lucide-react";
 import UserAvatar from "@/components/UserAvatar";
 
 const Dashboard_API = () => {
@@ -22,7 +18,6 @@ const Dashboard_API = () => {
   const { groupedCards, loading } = useSelector((state) => state.medical);
   
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("appointments");
 
   useEffect(() => {
     console.log("🔍 [Dashboard] Component mounted");
@@ -121,21 +116,8 @@ const Dashboard_API = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {/* Tabs for Appointments and Chat */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
-            <TabsTrigger value="appointments" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              Appointments
-            </TabsTrigger>
-            <TabsTrigger value="chat" className="gap-2">
-              <MessageSquare className="h-4 w-4" />
-              AI Assistant
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Appointments Tab */}
-          <TabsContent value="appointments" className="mt-0">
+        {/* Appointments Section */}
+        <div className="w-full">
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-3xl font-bold text-foreground">
@@ -285,15 +267,7 @@ const Dashboard_API = () => {
             })}
           </div>
         )}
-          </TabsContent>
-
-          {/* Chat Tab - Simple AI Assistant */}
-          <TabsContent value="chat" className="mt-0">
-            <div className="h-[calc(100vh-12rem)]">
-              <ChatBot />
-            </div>
-          </TabsContent>
-        </Tabs>
+        </div>
       </main>
     </div>
   );

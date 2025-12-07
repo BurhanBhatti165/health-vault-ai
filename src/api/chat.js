@@ -1,15 +1,17 @@
 import axios from './axios';
 
 export const chatAPI = {
-  // Get user's chat history with AI assistant
-  getChatMessages: async () => {
-    const response = await axios.get('/chat/messages');
+  getChatMessages: async (appointmentId) => {
+    console.log('📡 [API] GET /chat/messages/' + appointmentId);
+    const response = await axios.get(`/chat/messages/${appointmentId}`);
+    console.log('✅ [API] Response:', response.data);
     return response.data;
   },
 
-  // Send message to AI assistant
-  sendMessage: async (data) => {
-    const response = await axios.post('/chat/send', data);
+  sendMessage: async (appointmentId, message) => {
+    console.log('📡 [API] POST /chat/send/' + appointmentId, { message });
+    const response = await axios.post(`/chat/send/${appointmentId}`, { message });
+    console.log('✅ [API] Response:', response.data);
     return response.data;
-  }
+  },
 };

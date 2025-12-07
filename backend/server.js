@@ -5,6 +5,8 @@ import connectDB from './config/database.js';
 import authRoutes from './routes/auth.js';
 import appointmentRoutes from './routes/appointments.js';
 import chatRoutes from './routes/chat.js';
+import langGraphRoutes from './routes/langgraph.js';
+import extractionRoutes from './routes/extraction.js';
 
 // Initialize Express app
 const app = express();
@@ -21,6 +23,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/langgraph', langGraphRoutes);
+app.use('/api/extract', extractionRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -61,6 +65,7 @@ app.listen(PORT, () => {
   console.log(`💾 MongoDB: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
   console.log(`☁️  Cloudinary: ${process.env.CLOUDINARY_CLOUD_NAME ? 'Configured' : 'Not configured'}`);
   console.log(`🔍 OCR: ${process.env.OCR_API_KEY ? 'Configured' : 'Not configured'}`);
+  console.log(`🤖 LangGraph: Enabled (OpenRouter)`);
   console.log('='.repeat(50));
 });
 
