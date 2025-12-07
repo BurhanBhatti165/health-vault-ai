@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Calendar, FileText, User } from "lucide-react";
+import { ArrowLeft, Calendar, FileText } from "lucide-react";
+import UserAvatar from "@/components/UserAvatar";
 
 const PatientAppointments = () => {
   const navigate = useNavigate();
@@ -53,9 +54,7 @@ const PatientAppointments = () => {
         <Card className="mb-8 shadow-card">
           <CardHeader>
             <div className="flex items-start gap-4">
-              <div className="p-3 rounded-full bg-gradient-primary">
-                <User className="h-6 w-6 text-white" />
-              </div>
+              <UserAvatar user={patient} size="xl" />
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{patient.name}</CardTitle>
                 <CardDescription className="space-y-1">
@@ -67,6 +66,12 @@ const PatientAppointments = () => {
                 <div className="text-sm text-muted-foreground">Appointment{appointments.length !== 1 ? 's' : ''}</div>
               </div>
             </div>
+            {patient.bio && (
+              <div className="mt-4 pt-4 border-t border-border/50">
+                <div className="text-sm text-muted-foreground mb-1">About</div>
+                <p className="text-sm">{patient.bio}</p>
+              </div>
+            )}
           </CardHeader>
         </Card>
 

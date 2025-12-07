@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { ArrowLeft, Calendar, FileText, User, Download, Eye, Trash2, Edit2, Save, X, Upload } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Download, Eye, Trash2, Edit2, Save, X, Upload } from "lucide-react";
+import UserAvatar from "@/components/UserAvatar";
 
 const AppointmentDetail = () => {
   const navigate = useNavigate();
@@ -193,9 +194,10 @@ const AppointmentDetail = () => {
         <Card className="mb-6 shadow-card">
           <CardHeader>
             <div className="flex items-start gap-4">
-              <div className="p-3 rounded-full bg-primary/10">
-                <User className="h-6 w-6 text-primary" />
-              </div>
+              <UserAvatar 
+                user={isPatient ? appointment.doctorId : appointment.patientId} 
+                size="xl" 
+              />
               <div className="flex-1">
                 {isPatient ? (
                   <>
@@ -218,6 +220,14 @@ const AppointmentDetail = () => {
                 )}
               </div>
             </div>
+            {((isPatient && appointment.doctorId?.bio) || (!isPatient && appointment.patientId?.bio)) && (
+              <div className="mt-4 pt-4 border-t border-border/50">
+                <div className="text-sm text-muted-foreground mb-1">About</div>
+                <p className="text-sm">
+                  {isPatient ? appointment.doctorId.bio : appointment.patientId.bio}
+                </p>
+              </div>
+            )}
           </CardHeader>
         </Card>
 

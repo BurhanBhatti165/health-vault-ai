@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import cloudinary from '../config/cloudinary.js';
 
 // Generate JWT Token
 const generateToken = (userId, role) => {
@@ -16,7 +17,7 @@ const generateToken = (userId, role) => {
 // @access  Public
 const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, specialty, hospital, phone } = req.body;
 
     // Validation
     if (!name || !email || !password || !role) {
@@ -42,17 +43,47 @@ const register = async (req, res) => {
       });
     }
 
-    // Hash password (simplified for Phase 1, but included for basic security)
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Handle profile image upload to Cloudinary
+    let profileImageUrl = null;
+    if (req.file) {
+      try {
+        // Convert buffer to base64
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+        
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(dataURI, {
+          folder: 'health-vault/profiles',
+          resource_type: 'auto'
+        });
+        
+        profileImageUrl = result.secure_url;
+      } catch (uploadError) {
+        console.error('Image upload error:', uploadError);
+        // Continue without image if upload fails
+      }
+    }
+
     // Create user
-    const user = new User({
+    const userData = {
       name,
       email,
       password: hashedPassword,
-      role
-    });
+      role,
+      profileImage: profileImageUrl
+    };
 
+    // Add doctor-specific fields if role is Doctor
+    if (role === 'Doctor') {
+      if (specialty) userData.specialty = specialty;
+      if (hospital) userData.hospital = hospital;
+      if (phone) userData.phone = phone;
+    }
+
+    const user = new User(userData);
     await user.save();
 
     // Generate token
@@ -67,7 +98,12 @@ const register = async (req, res) => {
           id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          profileImage: user.profileImage,
+          specialty: user.specialty,
+          hospital: user.hospital,
+          phone: user.phone,
+          bio: user.bio
         }
       }
     });
@@ -125,7 +161,12 @@ const login = async (req, res) => {
           id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          profileImage: user.profileImage,
+          specialty: user.specialty,
+          hospital: user.hospital,
+          phone: user.phone,
+          bio: user.bio
         }
       }
     });
@@ -152,7 +193,12 @@ const getMe = async (req, res) => {
           id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          profileImage: user.profileImage,
+          specialty: user.specialty,
+          hospital: user.hospital,
+          phone: user.phone,
+          bio: user.bio
         }
       }
     });
@@ -165,4 +211,94 @@ const getMe = async (req, res) => {
   }
 };
 
-export { register, login, getMe };
+// @route   PUT /api/auth/profile
+// @desc    Update user profile
+// @access  Private
+const updateProfile = async (req, res) => {
+  try {
+    const { name, email, specialty, hospital, phone, bio } = req.body;
+
+    // Find user
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Check if email is being changed and if it's already taken
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Email already in use' 
+        });
+      }
+      user.email = email;
+    }
+
+    // Update basic fields
+    if (name) user.name = name;
+    if (bio !== undefined) user.bio = bio;
+
+    // Update doctor-specific fields
+    if (user.role === 'Doctor') {
+      if (specialty !== undefined) user.specialty = specialty;
+      if (hospital !== undefined) user.hospital = hospital;
+      if (phone !== undefined) user.phone = phone;
+    }
+
+    // Handle profile image upload
+    if (req.file) {
+      try {
+        // Convert buffer to base64
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+        
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(dataURI, {
+          folder: 'health-vault/profiles',
+          resource_type: 'auto'
+        });
+        
+        user.profileImage = result.secure_url;
+      } catch (uploadError) {
+        console.error('Image upload error:', uploadError);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Failed to upload image' 
+        });
+      }
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          profileImage: user.profileImage,
+          specialty: user.specialty,
+          hospital: user.hospital,
+          phone: user.phone,
+          bio: user.bio
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error during profile update' 
+    });
+  }
+};
+
+export { register, login, getMe, updateProfile };

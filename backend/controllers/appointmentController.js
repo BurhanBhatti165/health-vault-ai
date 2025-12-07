@@ -29,8 +29,8 @@ const getAppointments = async (req, res) => {
     }
 
     const appointments = await Appointment.find(query)
-      .populate('doctorId', 'name specialty hospital email')
-      .populate('patientId', 'name email')
+      .populate('doctorId', 'name specialty hospital email profileImage bio')
+      .populate('patientId', 'name email profileImage bio')
       .sort({ appointmentDate: -1 });
     
     res.json({
@@ -54,7 +54,7 @@ const getGroupedAppointments = async (req, res) => {
     if (req.userRole === 'Patient') {
       // Patient sees doctor cards with their appointments
       const appointments = await Appointment.find({ patientId: req.userId })
-        .populate('doctorId', 'name specialty hospital email phone')
+        .populate('doctorId', 'name specialty hospital email phone profileImage bio')
         .sort({ appointmentDate: -1 });
       
       // Group by doctor
@@ -77,7 +77,7 @@ const getGroupedAppointments = async (req, res) => {
     } else if (req.userRole === 'Doctor') {
       // Doctor sees patient cards with their appointments
       const appointments = await Appointment.find({ doctorId: req.userId })
-        .populate('patientId', 'name email')
+        .populate('patientId', 'name email profileImage bio')
         .sort({ appointmentDate: -1 });
       
       // Group by patient
@@ -115,7 +115,7 @@ const getRelatedUsers = async (req, res) => {
     if (req.userRole === 'Patient') {
       // Patient gets list of all doctors
       const doctors = await User.find({ role: 'Doctor' })
-        .select('name specialty hospital email phone');
+        .select('name specialty hospital email phone profileImage bio');
       
       res.json({
         success: true,
@@ -127,7 +127,7 @@ const getRelatedUsers = async (req, res) => {
         .distinct('patientId');
       
       const patients = await User.find({ _id: { $in: appointments } })
-        .select('name email');
+        .select('name email profileImage bio');
       
       res.json({
         success: true,
@@ -149,8 +149,8 @@ const getRelatedUsers = async (req, res) => {
 const getAppointment = async (req, res) => {
   try {
     const appointment = await Appointment.findById(req.params.id)
-      .populate('doctorId', 'name specialty hospital email')
-      .populate('patientId', 'name email');
+      .populate('doctorId', 'name specialty hospital email profileImage bio')
+      .populate('patientId', 'name email profileImage bio');
     
     if (!appointment) {
       return res.status(404).json({ 
@@ -230,24 +230,28 @@ const createAppointment = async (req, res) => {
     }
     console.log('✅ [Backend] Doctor verified:', doctor.name);
 
-    let cloudURL = '';
-    let ocrText = '';
-    let fileName = '';
-    let fileType = '';
+    const documents = [];
 
     // Process file if uploaded
     if (req.file) {
       console.log('📤 [Backend] Processing file:', req.file.originalname);
       console.log('📤 [Backend] Uploading to Cloudinary...');
-      cloudURL = await uploadToCloudinary(req.file);
+      const cloudURL = await uploadToCloudinary(req.file);
       console.log('✅ [Backend] Cloudinary upload complete:', cloudURL);
       
       console.log('🔍 [Backend] Extracting text with OCR...');
-      ocrText = await extractText(req.file.path);
+      const ocrText = await extractText(req.file.path);
       console.log('✅ [Backend] OCR complete, text length:', ocrText.length);
       
-      fileName = req.file.originalname;
-      fileType = req.file.mimetype;
+      // Add to documents array
+      documents.push({
+        cloudStorageURL: cloudURL,
+        fileName: req.file.originalname,
+        fileType: req.file.mimetype,
+        ocrText: ocrText,
+        uploadedAt: new Date()
+      });
+      
       fs.unlinkSync(req.file.path);
     }
 
@@ -256,15 +260,12 @@ const createAppointment = async (req, res) => {
       patientId: req.userId,
       doctorId,
       appointmentDate,
-      cloudStorageURL: cloudURL,
-      ocrText,
-      fileName,
-      fileType,
+      documents,
       notes
     });
 
     await appointment.save();
-    await appointment.populate('doctorId', 'name specialty hospital email');
+    await appointment.populate('doctorId', 'name specialty hospital email profileImage bio');
     console.log('✅ [Backend] Appointment created:', appointment._id);
 
     res.status(201).json({
@@ -312,7 +313,7 @@ const updateAppointment = async (req, res) => {
     if (appointmentDate !== undefined) appointment.appointmentDate = appointmentDate;
     
     await appointment.save();
-    await appointment.populate('doctorId', 'name specialty hospital email');
+    await appointment.populate('doctorId', 'name specialty hospital email profileImage bio');
 
     res.json({
       success: true,
@@ -391,7 +392,7 @@ const uploadDocument = async (req, res) => {
     });
     
     await appointment.save();
-    await appointment.populate('doctorId', 'name specialty hospital email');
+    await appointment.populate('doctorId', 'name specialty hospital email profileImage bio');
     console.log('✅ [Backend] Document added, total documents:', appointment.documents.length);
 
     res.json({
@@ -441,7 +442,7 @@ const removeDocument = async (req, res) => {
     );
     
     await appointment.save();
-    await appointment.populate('doctorId', 'name specialty hospital email');
+    await appointment.populate('doctorId', 'name specialty hospital email profileImage bio');
 
     res.json({
       success: true,
