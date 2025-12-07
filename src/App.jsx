@@ -11,6 +11,7 @@ import CreateAppointment from "./pages/CreateAppointment";
 import DoctorAppointments from "./pages/DoctorAppointments";
 import PatientAppointments from "./pages/PatientAppointments";
 import AppointmentDetail from "./pages/AppointmentDetail";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/appointments/new" element={<CreateAppointment />} />
           <Route path="/doctor/:doctorId" element={<DoctorAppointments />} />
           <Route path="/patient/:patientId" element={<PatientAppointments />} />

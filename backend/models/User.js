@@ -22,6 +22,16 @@ const userSchema = new mongoose.Schema({
     enum: ['Patient', 'Doctor'],
     required: true
   },
+  // Profile image
+  profileImage: {
+    type: String,
+    default: null
+  },
+  // Biography
+  bio: {
+    type: String,
+    default: ""
+  },
   // Doctor-specific fields (only used if role is Doctor)
   specialty: {
     type: String,

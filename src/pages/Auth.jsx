@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Activity } from "lucide-react";
+import { Activity, Upload, X } from "lucide-react";
 import { authAPI } from "@/api/auth";
 
 const Auth = () => {
@@ -23,6 +23,8 @@ const Auth = () => {
   const [specialty, setSpecialty] = useState("");
   const [hospital, setHospital] = useState("");
   const [phone, setPhone] = useState("");
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -55,26 +57,57 @@ const Auth = () => {
     }
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image size should be less than 5MB");
+        return;
+      }
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error("Please select an image file");
+        return;
+      }
+      
+      setProfileImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSignup = async (e) => {
     e.preventDefault();
     dispatch(setLoading(true));
 
     try {
-      const userData = {
-        name: fullName,
-        email,
-        password,
-        role
-      };
+      // Create FormData for multipart/form-data
+      const formData = new FormData();
+      formData.append('name', fullName);
+      formData.append('email', email);
+      formData.append('password', password);
+      formData.append('role', role);
 
       // Add doctor-specific fields if role is Doctor
       if (role === 'Doctor') {
-        if (specialty) userData.specialty = specialty;
-        if (hospital) userData.hospital = hospital;
-        if (phone) userData.phone = phone;
+        if (specialty) formData.append('specialty', specialty);
+        if (hospital) formData.append('hospital', hospital);
+        if (phone) formData.append('phone', phone);
       }
 
-      const response = await authAPI.register(userData);
+      // Add profile image if selected
+      if (profileImage) {
+        formData.append('profileImage', profileImage);
+      }
+
+      const response = await authAPI.register(formData);
       
       if (response.success) {
         const { token, user } = response.data;
@@ -145,6 +178,48 @@ const Auth = () => {
             </TabsContent>
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4 mt-4">
+                {/* Profile Image Upload */}
+                <div className="space-y-2">
+                  <Label>Profile Picture (Optional)</Label>
+                  <div className="flex items-center gap-4">
+                    {imagePreview ? (
+                      <div className="relative">
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          className="w-20 h-20 rounded-full object-cover border-2 border-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProfileImage(null);
+                            setImagePreview(null);
+                          }}
+                          className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-1 hover:bg-destructive/90"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/30">
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <Input
+                        id="profile-image"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="cursor-pointer"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Max size: 5MB. Formats: JPG, PNG, GIF, WebP
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Full Name</Label>
                   <Input

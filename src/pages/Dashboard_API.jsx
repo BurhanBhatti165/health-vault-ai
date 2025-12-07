@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Activity, Plus, Search, LogOut, Calendar, FileText } from "lucide-react";
+import { Activity, Plus, Search, LogOut, Calendar, FileText, Settings } from "lucide-react";
+import UserAvatar from "@/components/UserAvatar";
 
 const Dashboard_API = () => {
   const navigate = useNavigate();
@@ -95,9 +96,7 @@ const Dashboard_API = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-primary">
-                <Activity className="h-6 w-6 text-white" />
-              </div>
+              <UserAvatar user={profile} size="md" />
               <div>
                 <h1 className="text-xl font-bold text-foreground">HealthVault AI</h1>
                 <p className="text-xs text-muted-foreground">
@@ -105,10 +104,16 @@ const Dashboard_API = () => {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={handleSignOut} className="gap-2">
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => navigate("/profile")} className="gap-2">
+                <Settings className="h-4 w-4" />
+                Profile
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleSignOut} className="gap-2">
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -193,19 +198,22 @@ const Dashboard_API = () => {
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-xl mb-2">{person.name}</CardTitle>
-                        <CardDescription className="space-y-1">
-                          <div>{person.email}</div>
-                          {!isDoctor && person.specialty && (
-                            <div className="text-primary font-medium">{person.specialty}</div>
-                          )}
-                          {!isDoctor && person.hospital && (
-                            <div>{person.hospital}</div>
-                          )}
-                        </CardDescription>
+                      <div className="flex items-start gap-4 flex-1">
+                        <UserAvatar user={person} size="lg" className="flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-xl mb-2">{person.name}</CardTitle>
+                          <CardDescription className="space-y-1">
+                            <div>{person.email}</div>
+                            {!isDoctor && person.specialty && (
+                              <div className="text-primary font-medium">{person.specialty}</div>
+                            )}
+                            {!isDoctor && person.hospital && (
+                              <div>{person.hospital}</div>
+                            )}
+                          </CardDescription>
+                        </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Calendar className="h-4 w-4" />
                           <span className="text-sm">{appointments.length} appointment{appointments.length !== 1 ? 's' : ''}</span>
