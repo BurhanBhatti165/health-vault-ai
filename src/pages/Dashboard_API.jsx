@@ -4,11 +4,15 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "@/store/slices/authSlice";
 import { setGroupedCards, setLoading as setReduxLoading } from "@/store/slices/medicalSlice";
 import { appointmentAPI } from "@/api/appointments";
+import { chatAPI } from "@/api/chat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Activity, Plus, Search, LogOut, Calendar, FileText } from "lucide-react";
+import { Activity, Plus, Search, LogOut, Calendar, FileText, MessageSquare, Users } from "lucide-react";
+import ChatBot from "@/components/ChatBot";
 
 const Dashboard_API = () => {
   const navigate = useNavigate();
@@ -17,12 +21,10 @@ const Dashboard_API = () => {
   const { groupedCards, loading } = useSelector((state) => state.medical);
   
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("appointments");
 
   useEffect(() => {
     console.log("🔍 [Dashboard] Component mounted");
-    console.log("🔍 [Dashboard] isAuthenticated:", isAuthenticated);
-    console.log("🔍 [Dashboard] profile:", profile);
-    
     if (!isAuthenticated) {
       console.log("⚠️ [Dashboard] Not authenticated, redirecting to auth...");
       navigate("/auth");
@@ -114,71 +116,86 @@ const Dashboard_API = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-3xl font-bold text-foreground">
-              {isDoctor ? "My Patients" : "My Appointments"}
-            </h2>
-            {!isDoctor && (
-              <Button
-                onClick={() => navigate("/appointments/new")}
-                className="gap-2 shadow-hover hover:shadow-card transition-all"
-              >
-                <Plus className="h-4 w-4" />
-                New Appointment
-              </Button>
-            )}
-          </div>
-          
-          {groupedCards.length > 0 && (
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder={isDoctor ? "Search patients..." : "Search doctors..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          )}
-        </div>
+        {/* Tabs for Appointments and Chat */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+            <TabsTrigger value="appointments" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              Appointments
+            </TabsTrigger>
+            <TabsTrigger value="chat" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              AI Assistant
+            </TabsTrigger>
+          </TabsList>
 
-        {filteredCards.length === 0 && searchQuery ? (
-          <Card className="shadow-card border-border/50">
-            <CardHeader className="text-center pb-6">
-              <div className="mx-auto mb-4 p-4 rounded-full bg-muted w-fit">
-                <Search className="h-8 w-8 text-muted-foreground" />
+          {/* Appointments Tab */}
+          <TabsContent value="appointments" className="mt-0">
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-3xl font-bold text-foreground">
+                  {isDoctor ? "My Patients" : "My Appointments"}
+                </h2>
+                {!isDoctor && (
+                  <Button
+                    onClick={() => navigate("/appointments/new")}
+                    className="gap-2 shadow-hover hover:shadow-card transition-all"
+                  >
+                    <Plus className="h-4 w-4" />
+                    New Appointment
+                  </Button>
+                )}
               </div>
-              <CardTitle className="text-2xl">No Results Found</CardTitle>
-              <CardDescription className="text-base">
-                No {isDoctor ? "patients" : "doctors"} match your search.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        ) : groupedCards.length === 0 ? (
-          <Card className="shadow-card border-border/50">
-            <CardHeader className="text-center pb-6">
-              <div className="mx-auto mb-4 p-4 rounded-full bg-gradient-primary w-fit">
-                <Activity className="h-8 w-8 text-white" />
-              </div>
-              <CardTitle className="text-2xl">
-                {isDoctor ? "No Patients Yet" : "No Appointments Yet"}
-              </CardTitle>
-              <CardDescription className="text-base">
-                {isDoctor 
-                  ? "Your patients will appear here once they create appointments with you."
-                  : "Create your first appointment to get started."}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        ) : (
-          <div className="grid gap-6">
-            {filteredCards.map((card, index) => {
-              const person = isDoctor ? card.patient : card.doctor;
-              const appointments = card.appointments || [];
               
-              return (
+              {groupedCards.length > 0 && (
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder={isDoctor ? "Search patients..." : "Search doctors..."}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              )}
+            </div>
+
+            {filteredCards.length === 0 && searchQuery ? (
+              <Card className="shadow-card border-border/50">
+                <CardHeader className="text-center pb-6">
+                  <div className="mx-auto mb-4 p-4 rounded-full bg-muted w-fit">
+                    <Search className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <CardTitle className="text-2xl">No Results Found</CardTitle>
+                  <CardDescription className="text-base">
+                    No {isDoctor ? "patients" : "doctors"} match your search.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ) : groupedCards.length === 0 ? (
+              <Card className="shadow-card border-border/50">
+                <CardHeader className="text-center pb-6">
+                  <div className="mx-auto mb-4 p-4 rounded-full bg-gradient-primary w-fit">
+                    <Activity className="h-8 w-8 text-white" />
+                  </div>
+                  <CardTitle className="text-2xl">
+                    {isDoctor ? "No Patients Yet" : "No Appointments Yet"}
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    {isDoctor 
+                      ? "Your patients will appear here once they create appointments with you."
+                      : "Create your first appointment to get started."}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ) : (
+              <div className="grid gap-6">
+                {filteredCards.map((card, index) => {
+                  const person = isDoctor ? card.patient : card.doctor;
+                  const appointments = card.appointments || [];
+                  
+                  return (
                 <Card 
                   key={index} 
                   className="shadow-card border-border/50 hover:shadow-lg transition-all cursor-pointer"
@@ -260,6 +277,15 @@ const Dashboard_API = () => {
             })}
           </div>
         )}
+          </TabsContent>
+
+          {/* Chat Tab - Simple AI Assistant */}
+          <TabsContent value="chat" className="mt-0">
+            <div className="h-[calc(100vh-12rem)]">
+              <ChatBot />
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
