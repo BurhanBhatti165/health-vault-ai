@@ -11,8 +11,10 @@ import extractionRoutes from './routes/extraction.js';
 // Initialize Express app
 const app = express();
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB (only in development, serverless handles this differently)
+if (process.env.NODE_ENV !== 'production') {
+  connectDB();
+}
 
 // Middleware
 app.use(cors());
