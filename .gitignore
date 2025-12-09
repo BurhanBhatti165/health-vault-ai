@@ -95,6 +95,10 @@ Desktop.ini
 .vercel
 .turbo
 
+# Deployment
+.vercel
+.env.production
+
 # ============================================
 # PROJECT SPECIFIC - HEALTH VAULT AI
 # ============================================

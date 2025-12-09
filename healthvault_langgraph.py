@@ -2,6 +2,23 @@
 HealthVault LangGraph Workflow
 3 Agents: Extractor -> Profiler -> Summarizer
 """
+
+def process_health_query(query):
+    """Simple function to process health queries for API integration"""
+    try:
+        # For now, return a simple response
+        # In production, this would integrate with the full LangGraph workflow
+        return {
+            "success": True,
+            "response": f"Processed query: {query}",
+            "analysis": "This is a placeholder response for the health query processing."
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "response": "Error processing health query"
+        }
 import os
 import base64
 import json
@@ -9,15 +26,15 @@ from typing import TypedDict, List, Dict, Any
 from langgraph.graph import StateGraph, END
 import requests
 
-# Configuration
+
 OPENROUTER_API_KEY = "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"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Mock patient database (in-memory)
+
 PATIENT_DATABASE = {}
 
 
-# Define the Graph State
+
 class HealthVaultState(TypedDict):
     image_path: str
     extracted_data: Dict[str, Any]
@@ -26,7 +43,7 @@ class HealthVaultState(TypedDict):
     patient_id: str
 
 
-# Helper function to call OpenRouter API
+
 def call_openrouter(messages: List[Dict], model: str = "google/gemma-3-27b-it:free") -> str:
     """Call OpenRouter API with messages"""
     payload = {
@@ -50,14 +67,14 @@ def call_openrouter(messages: List[Dict], model: str = "google/gemma-3-27b-it:fr
         return f"Error: {str(e)}"
 
 
-# Agent 1: Extractor - Extract prescription data from image
+
 def extractor_agent(state: HealthVaultState) -> HealthVaultState:
     """Extract diagnosis and medicines from prescription image"""
     print("\n🔍 EXTRACTOR AGENT: Processing prescription image...")
     
     image_path = state["image_path"]
     
-    # Read and encode image
+
     try:
         with open(image_path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode("ascii")
@@ -67,7 +84,7 @@ def extractor_agent(state: HealthVaultState) -> HealthVaultState:
         state["extracted_data"] = {"error": "Image not found"}
         return state
     
-    # Call vision model to extract data
+
     messages = [
         {
             "role": "user",
@@ -91,9 +108,9 @@ Do not include any other text, just the JSON."""
     
     response = call_openrouter(messages)
     
-    # Parse JSON response
+
     try:
-        # Try to extract JSON from response
+
         if "```json" in response:
             json_str = response.split("```json")[1].split("```")[0].strip()
         elif "```" in response:
@@ -104,7 +121,7 @@ Do not include any other text, just the JSON."""
         extracted_data = json.loads(json_str)
         print(f"✅ Extracted: {extracted_data}")
     except json.JSONDecodeError:
-        # Fallback: create structured data from text
+
         extracted_data = {
             "diagnosis": "Unable to parse",
             "medicines": ["Data extraction failed"],
@@ -116,7 +133,7 @@ Do not include any other text, just the JSON."""
     return state
 
 
-# Agent 2: Profiler - Update patient history
+
 def profiler_agent(state: HealthVaultState) -> HealthVaultState:
     """Add extracted data to patient's medical history"""
     print("\n📋 PROFILER AGENT: Updating patient history...")
@@ -124,11 +141,11 @@ def profiler_agent(state: HealthVaultState) -> HealthVaultState:
     patient_id = state.get("patient_id", "default_patient")
     extracted_data = state["extracted_data"]
     
-    # Initialize patient history if not exists
+
     if patient_id not in PATIENT_DATABASE:
         PATIENT_DATABASE[patient_id] = []
     
-    # Add new record to history
+
     new_record = {
         "diagnosis": extracted_data.get("diagnosis", "Unknown"),
         "medicines": extracted_data.get("medicines", []),
@@ -137,7 +154,7 @@ def profiler_agent(state: HealthVaultState) -> HealthVaultState:
     
     PATIENT_DATABASE[patient_id].append(new_record)
     
-    # Get full history
+
     patient_history = PATIENT_DATABASE[patient_id]
     state["patient_history"] = patient_history
     
@@ -147,7 +164,7 @@ def profiler_agent(state: HealthVaultState) -> HealthVaultState:
     return state
 
 
-# Agent 3: Summarizer - Create medical summary
+
 def summarizer_agent(state: HealthVaultState) -> HealthVaultState:
     """Generate a summary of patient's medical status"""
     print("\n📝 SUMMARIZER AGENT: Creating medical summary...")
@@ -155,7 +172,7 @@ def summarizer_agent(state: HealthVaultState) -> HealthVaultState:
     patient_history = state["patient_history"]
     patient_id = state.get("patient_id", "default_patient")
     
-    # Build context from history
+
     history_text = f"Patient ID: {patient_id}\n\n"
     history_text += f"Total medical records: {len(patient_history)}\n\n"
     
@@ -165,7 +182,7 @@ def summarizer_agent(state: HealthVaultState) -> HealthVaultState:
         history_text += f"  Medicines: {', '.join(record['medicines'])}\n"
         history_text += f"  Date: {record['timestamp']}\n\n"
     
-    # Call LLM to generate summary
+
     messages = [
         {
             "role": "user",
@@ -185,31 +202,31 @@ Focus on: current diagnosis, prescribed medications, and any patterns in the med
     return state
 
 
-# Build the LangGraph workflow
+
 def create_healthvault_graph():
     """Create and compile the HealthVault workflow graph"""
     
-    # Initialize the graph
+
     workflow = StateGraph(HealthVaultState)
     
-    # Add the three agent nodes
+
     workflow.add_node("extractor", extractor_agent)
     workflow.add_node("profiler", profiler_agent)
     workflow.add_node("summarizer", summarizer_agent)
     
-    # Define the flow: extractor -> profiler -> summarizer -> END
+
     workflow.set_entry_point("extractor")
     workflow.add_edge("extractor", "profiler")
     workflow.add_edge("profiler", "summarizer")
     workflow.add_edge("summarizer", END)
     
-    # Compile the graph
+
     app = workflow.compile()
     
     return app
 
 
-# Main function to run the workflow
+
 def run_healthvault_workflow(image_path: str, patient_id: str = "patient_001"):
     """
     Run the complete HealthVault workflow
@@ -222,10 +239,10 @@ def run_healthvault_workflow(image_path: str, patient_id: str = "patient_001"):
     print("🏥 HEALTHVAULT LANGGRAPH WORKFLOW")
     print("=" * 60)
     
-    # Create the graph
+
     app = create_healthvault_graph()
     
-    # Initial state
+
     initial_state = {
         "image_path": image_path,
         "extracted_data": {},
@@ -234,10 +251,10 @@ def run_healthvault_workflow(image_path: str, patient_id: str = "patient_001"):
         "patient_id": patient_id
     }
     
-    # Run the workflow
+
     final_state = app.invoke(initial_state)
     
-    # Display results
+
     print("\n" + "=" * 60)
     print("📊 FINAL RESULTS")
     print("=" * 60)
@@ -253,7 +270,7 @@ def run_healthvault_workflow(image_path: str, patient_id: str = "patient_001"):
     return final_state
 
 
-# Example usage
+
 if __name__ == "__main__":
     # Test with a prescription image
     image_path = "prescription.png"

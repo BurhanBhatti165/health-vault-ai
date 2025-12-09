@@ -26,7 +26,11 @@ export const getChatMessages = async (req, res) => {
       });
     }
 
-    const messages = await ChatMessage.find({ appointmentId })
+    // Get messages for this user only (separate chat for doctor and patient)
+    const messages = await ChatMessage.find({ 
+      appointmentId,
+      userId  // Filter by current user - doctor and patient have separate chats
+    })
       .sort({ createdAt: 1 })
       .limit(100);
 
@@ -114,8 +118,11 @@ export const sendMessage = async (req, res) => {
       } : {})
     };
 
-    // Get chat history for this appointment only
-    const recentMessages = await ChatMessage.find({ appointmentId })
+    // Get chat history for this user only (separate chat for doctor and patient)
+    const recentMessages = await ChatMessage.find({ 
+      appointmentId,
+      userId  // Filter by current user - each user has their own chat history
+    })
       .sort({ createdAt: 1 })
       .limit(20);
 

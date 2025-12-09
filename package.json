@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "node backend/server.js",
-    "server:dev": "nodemon backend/server.js"
+    "server:dev": "nodemon backend/server.js",
+    "vercel-build": "vite build",
+    "deploy:check": "node deploy.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

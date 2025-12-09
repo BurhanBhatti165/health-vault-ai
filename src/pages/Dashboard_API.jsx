@@ -115,9 +115,9 @@ const Dashboard_API = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 max-w-full overflow-hidden">
         {/* Appointments Section */}
-        <div className="w-full">
+        <div className="w-full max-w-full">
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-3xl font-bold text-foreground">
@@ -177,7 +177,7 @@ const Dashboard_API = () => {
                 </CardHeader>
               </Card>
             ) : (
-              <div className="grid gap-6">
+              <div className="grid gap-6 w-full">
                 {filteredCards.map((card, index) => {
                   const person = isDoctor ? card.patient : card.doctor;
                   const appointments = card.appointments || [];
@@ -185,7 +185,7 @@ const Dashboard_API = () => {
                   return (
                 <Card 
                   key={index} 
-                  className="shadow-card border-border/50 hover:shadow-lg transition-all cursor-pointer"
+                  className="shadow-card border-border/50 hover:shadow-lg transition-all cursor-pointer overflow-hidden w-full"
                   onClick={() => {
                     // Navigate to detail view with person ID
                     if (isDoctor) {
@@ -196,8 +196,8 @@ const Dashboard_API = () => {
                   }}
                 >
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4 flex-1">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-4 flex-1 min-w-0">
                         <UserAvatar user={person} size="lg" className="flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-xl mb-2">{person.name}</CardTitle>
@@ -243,7 +243,7 @@ const Dashboard_API = () => {
                                     year: 'numeric'
                                   })}
                                 </div>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-muted-foreground truncate">
                                   {apt.documents?.length > 0 && (
                                     <span>{apt.documents.length} document{apt.documents.length !== 1 ? 's' : ''}</span>
                                   )}

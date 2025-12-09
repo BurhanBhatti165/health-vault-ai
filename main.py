@@ -7,7 +7,7 @@ import requests
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 API_KEY = "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"
 
-# Read local image and convert to data URL so it can be sent inline
+
 image_path = os.path.join(os.getcwd(), "prescription.png")
 try:
   with open(image_path, "rb") as f:
@@ -46,7 +46,7 @@ except requests.HTTPError:
 
 data = resp.json()
 
-# Print the assistant message content if available
+
 content = None
 try:
   content = data["choices"][0]["message"]["content"]

@@ -17,7 +17,7 @@ export const extractWithGemini = async (imageUrl) => {
     const base64Image = imageBuffer.toString('base64');
     const mimeType = imageResponse.headers['content-type'] || 'image/jpeg';
 
-    // Use Gemini 2.0 Flash model (latest with vision capabilities)
+    // Use Gemini Pro Vision model (supports image analysis)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `You are a medical document analyzer. Carefully examine this medical document and extract ALL visible information in a structured format.

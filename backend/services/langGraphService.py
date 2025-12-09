@@ -10,7 +10,7 @@ from langgraph.graph import StateGraph, END
 import requests
 
 # Configuration
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
@@ -21,8 +21,8 @@ class HealthVaultState(TypedDict):
     final_summary: str
 
 
-def call_openrouter(messages: List[Dict], model: str = "google/gemma-3-27b-it:free") -> str:
-    """Call OpenRouter API"""
+def call_openrouter(messages: List[Dict], model: str = "google/gemini-pro-1.5:free") -> str:
+    """Call OpenRouter API with vision support"""
     payload = {
         "model": model,
         "messages": messages,
@@ -34,74 +34,95 @@ def call_openrouter(messages: List[Dict], model: str = "google/gemma-3-27b-it:fr
         "Content-Type": "application/json",
     }
     
-    resp = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
-    resp.raise_for_status()
-    return resp.json()["choices"][0]["message"]["content"]
+    try:
+        resp = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        
+        # Check if response has the expected structure
+        if "choices" in data and len(data["choices"]) > 0:
+            return data["choices"][0]["message"]["content"]
+        else:
+            return f"Error: Unexpected API response structure: {json.dumps(data)}"
+    except requests.exceptions.RequestException as e:
+        return f"Error calling OpenRouter API: {str(e)}"
+    except Exception as e:
+        return f"Error processing API response: {str(e)}"
 
 
 def extractor_agent(state: HealthVaultState) -> HealthVaultState:
     """Extract prescription data from image"""
-    image_data_url = f"data:image/png;base64,{state['image_base64']}"
-    
-    messages = [{
-        "role": "user",
-        "content": [
-            {
-                "type": "text",
-                "text": """You are a medical document analyzer. Carefully examine this medical document/prescription image and extract ALL visible information.
+    try:
+        image_data_url = f"data:image/png;base64,{state['image_base64']}"
+        
+        messages = [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": """Analyze this medical document image and extract information. Return ONLY a JSON object (no other text):
 
-Return a JSON object with the following structure:
 {
-  "document_type": "prescription/lab_report/medical_certificate/etc",
-  "diagnosis": "primary diagnosis or condition mentioned",
-  "medicines": ["medicine name with dosage", "medicine name with dosage"],
-  "doctor_name": "prescribing doctor's name if visible",
-  "date": "date on document if visible",
-  "instructions": "any special instructions or notes",
-  "additional_findings": "any other relevant medical information"
+  "document_type": "prescription or lab_report or medical_certificate",
+  "diagnosis": "condition or diagnosis mentioned",
+  "medicines": ["medicine 1 with dosage", "medicine 2 with dosage"],
+  "doctor_name": "doctor's name if visible",
+  "date": "date if visible",
+  "instructions": "any instructions",
+  "additional_findings": "other relevant info"
 }
 
-If any field is not visible or not applicable, use "Not specified" or an empty array.
-Return ONLY the JSON, no other text."""
-            },
-            {"type": "image_url", "image_url": {"url": image_data_url}}
-        ]
-    }]
-    
-    response = call_openrouter(messages)
-    
-    try:
+Use "Not specified" for missing fields. Return ONLY valid JSON."""
+                },
+                {"type": "image_url", "image_url": {"url": image_data_url}}
+            ]
+        }]
+        
+        response = call_openrouter(messages)
+        
+        # Check if response contains error
+        if response.startswith("Error:"):
+            raise Exception(response)
+        
         # Try to extract JSON from response
-        if "```json" in response:
-            json_str = response.split("```json")[1].split("```")[0].strip()
-        elif "```" in response:
-            json_str = response.split("```")[1].split("```")[0].strip()
-        else:
-            json_str = response.strip()
+        json_str = response.strip()
+        
+        # Remove markdown code blocks if present
+        if "```json" in json_str:
+            json_str = json_str.split("```json")[1].split("```")[0].strip()
+        elif "```" in json_str:
+            json_str = json_str.split("```")[1].split("```")[0].strip()
+        
+        # Remove any leading/trailing text
+        if "{" in json_str and "}" in json_str:
+            start = json_str.index("{")
+            end = json_str.rindex("}") + 1
+            json_str = json_str[start:end]
         
         extracted = json.loads(json_str)
         
-        # Ensure required fields exist
+        # Ensure required fields exist with proper defaults
         state["extracted_data"] = {
             "document_type": extracted.get("document_type", "Medical Document"),
             "diagnosis": extracted.get("diagnosis", "Not specified"),
-            "medicines": extracted.get("medicines", []),
+            "medicines": extracted.get("medicines", []) if isinstance(extracted.get("medicines"), list) else [],
             "doctor_name": extracted.get("doctor_name", "Not specified"),
             "date": extracted.get("date", "Not specified"),
             "instructions": extracted.get("instructions", "Not specified"),
             "additional_findings": extracted.get("additional_findings", "Not specified"),
             "raw_text": response[:500]  # Keep first 500 chars of raw response
         }
+        
     except Exception as e:
-        # Fallback: use raw response as text
+        # Fallback: create a basic structure with error info
         state["extracted_data"] = {
             "document_type": "Medical Document",
-            "diagnosis": "Unable to parse structured data",
+            "diagnosis": "Extraction failed - please try Gemini Vision method",
             "medicines": [],
             "doctor_name": "Not specified",
             "date": "Not specified",
             "instructions": "Not specified",
-            "additional_findings": response[:300] if response else "No data extracted",
+            "additional_findings": f"Error: {str(e)[:200]}",
             "error": str(e)
         }
     
