@@ -5,9 +5,9 @@ import { uploadToCloudinary } from '../config/cloudinary.js';
 import { extractText } from '../config/ocr.js';
 import fs from 'fs';
 
-// Configure multer
+// Configure multer for serverless environment
 const upload = multer({ 
-  dest: 'uploads/',
+  dest: process.env.NODE_ENV === 'production' ? '/tmp/' : 'uploads/',
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
